@@ -1,0 +1,6 @@
+[submodule "sss"]
+	path = sss
+	url = git@github.com:mettlex/sss.git
+[submodule "emsdk"]
+	path = emsdk
+	url = https://github.com/emscripten-core/emsdk.git
