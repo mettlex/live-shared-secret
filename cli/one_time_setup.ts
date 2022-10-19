@@ -30,9 +30,8 @@ let secretFromInput = "";
 let secret: Uint8Array;
 
 if (!isSecretProvidedByUser) {
-  // Get random bytes of only-supported fixed length 64
-  const randomBytes = crypto.getRandomValues(new Uint8Array(64));
-  secret = randomBytes;
+  const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+  secret = new TextEncoder().encode(zeroPadBy64(encode(randomBytes)));
 } else {
   secretFromInput = await Secret.prompt({
     message: "Enter the secret",
