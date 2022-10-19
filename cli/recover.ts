@@ -1,6 +1,6 @@
 import { combineShares } from "../sss-wasm/index.js";
 import { Number, Secret, Select, Confirm } from "./prompt/mod.ts";
-import { decode } from "./encoding/base64.ts";
+import { encode, decode } from "./encoding/base64.ts";
 import { writeText } from "./copy_paste/mod.ts";
 import { aesGcmDecryptToUint8 } from "./aes-encryption/mod.ts";
 
@@ -137,6 +137,7 @@ console.log(`\nSecret recovered successfully.\n`);
 
 enum ActionTypes {
   COPY = "copy",
+  COPY_BASE64 = "copy_base64",
   PRINT = "print",
   NOTHING = "nothing",
 }
@@ -146,6 +147,11 @@ const action = (await Select.prompt({
   options: [
     Select.separator("--------"),
     { name: "Copy the secret to the clipboard", value: ActionTypes.COPY },
+    Select.separator("--------"),
+    {
+      name: "Copy the base64 encoded secret to the clipboard",
+      value: ActionTypes.COPY_BASE64,
+    },
     Select.separator("--------"),
     { name: "Print the secret to the console", value: ActionTypes.PRINT },
     Select.separator("--------"),
@@ -158,6 +164,9 @@ if (action === ActionTypes.PRINT) {
   console.log(retrievedSecretString);
 } else if (action === ActionTypes.COPY) {
   await writeText(retrievedSecretString);
+  console.log("Secret copied.");
+} else if (action === ActionTypes.COPY_BASE64) {
+  await writeText(encode(retrievedSecretString));
   console.log("Secret copied.");
 } else {
   console.log("Okay.");
