@@ -3,19 +3,25 @@ import { Number, Secret, Confirm, Select } from "./prompt/mod.ts";
 import { encode, decode } from "./encoding/base64.ts";
 import { zeroPadBy64 } from "./_utils/zero-pad.ts";
 import { directoryExists } from "./_utils/fs.ts";
+import { aesGcmDecrypt, aesGcmEncrypt } from "./aes-encryption/mod.ts";
+
+enum ExportTypes {
+  SAVE = "save",
+  PRINT = "print",
+}
 
 const totalShareCount = await Number.prompt({
-  message: "Total number of password shares",
+  message: "Total number of secret shares",
   min: 3,
 });
 
 const minimumShareCount = await Number.prompt({
-  message: "Minimum number of password shares",
+  message: "Minimum number of secret shares",
   max: totalShareCount,
 });
 
 const isSecretProvidedByUser = await Confirm.prompt({
-  message: "Do you enter the password yourself?",
+  message: "Do you enter the secret yourself?",
   default: false,
 });
 
@@ -28,7 +34,7 @@ if (!isSecretProvidedByUser) {
   secret = randomBytes;
 } else {
   secretFromInput = await Secret.prompt({
-    message: "Enter the password",
+    message: "Enter the secret",
     default: undefined,
   });
 
@@ -129,7 +135,7 @@ if (secretFromInput) {
   console.log("\n\nThe shares have been generated successfully.\n\n");
 } else {
   console.log(
-    "\n\nA random password and the shares have been generated successfully.\n\n",
+    "\n\nA random secret and the shares have been generated successfully.\n\n",
   );
 }
 
@@ -151,20 +157,7 @@ if (!shouldEncryptSharesOneByOne) {
   });
 
   if (!shouldEncryptSharesWithSinglePassword) {
-    enum ExportTypes {
-      SAVE = "save",
-      PRINT = "print",
-    }
-
-    const exportType = (await Select.prompt({
-      message: "Select an option",
-      options: [
-        Select.separator("--------"),
-        { name: "Save the shares as files", value: ExportTypes.SAVE },
-        Select.separator("--------"),
-        { name: "Print the shares to the console", value: ExportTypes.PRINT },
-      ],
-    })) as ExportTypes;
+    const exportType = await getExportType();
 
     if (exportType === ExportTypes.PRINT) {
       const totalParts = secretsWithShares.length;
@@ -221,7 +214,217 @@ if (!shouldEncryptSharesOneByOne) {
     console.log("Done.");
 
     Deno.exit(0);
+  } else {
+    // encrypt all shares with a single password
+
+    const password = await Secret.prompt({
+      message: "Enter the password for the AES encryption",
+    });
+
+    const exportType = await getExportType();
+
+    if (exportType === ExportTypes.PRINT) {
+      const totalParts = secretsWithShares.length;
+      let secretCount = 1;
+
+      for (const { shares } of secretsWithShares) {
+        console.log(
+          `\n\n============== Secret (${secretCount}/${totalParts}) ==============\n`,
+        );
+
+        const totalShares = shares.length;
+
+        for (let i = 0; i < shares.length; i++) {
+          const share = shares[i];
+
+          console.log(
+            `=== Share ${
+              i + 1
+            }/${totalShares} of Secret ${secretCount}/${totalParts} ===\n`,
+          );
+
+          const encrypted = await aesGcmEncrypt({ plaintext: share, password });
+
+          const decrypted = await aesGcmDecrypt({
+            ciphertext: encrypted,
+            password,
+          });
+
+          // verify encryption-decryption works
+          if (new TextDecoder().decode(share) !== decrypted) {
+            console.error("AES Encryption algorithm failed.");
+            Deno.exit(1);
+          }
+
+          console.log(encrypted);
+
+          console.log("\n\n");
+        }
+
+        console.log(
+          `\n========== End of Secret (${secretCount}/${totalParts}) ==========\n`,
+        );
+
+        secretCount++;
+      }
+    } else if (exportType === ExportTypes.SAVE) {
+      const newDirectoryPath = `data/${Date.now()}`;
+
+      Deno.mkdirSync(newDirectoryPath, { recursive: true });
+
+      const exportedShares: { [key: string]: string[] } = {};
+
+      for (let i = 0; i < secretsWithShares.length; i++) {
+        for (let j = 0; j < secretsWithShares[i].shares.length; j++) {
+          const share = secretsWithShares[i].shares[j];
+
+          const key = `share_${j + 1}`;
+
+          if (!exportedShares[key]) {
+            exportedShares[key] = [];
+          }
+
+          const encrypted = await aesGcmEncrypt({ plaintext: share, password });
+
+          const decrypted = await aesGcmDecrypt({
+            ciphertext: encrypted,
+            password,
+          });
+
+          // verify encryption-decryption works
+          if (new TextDecoder().decode(share) !== decrypted) {
+            console.error("AES Encryption algorithm failed.");
+            Deno.exit(1);
+          }
+
+          exportedShares[key].push(encrypted);
+        }
+      }
+
+      Deno.writeFileSync(
+        `${newDirectoryPath}/export.json`,
+        new TextEncoder().encode(JSON.stringify(exportedShares, null, 2)),
+      );
+    }
   }
 
+  console.log("Done.");
   Deno.exit(0);
+} else {
+  // encrypt each share one by one
+
+  const passwords = [];
+
+  for (let i = 0; i < totalShareCount; i++) {
+    const serial = i + 1;
+
+    const password = await Secret.prompt({
+      message: `Enter the password for share #${serial}`,
+    });
+
+    passwords.push(password);
+  }
+
+  const exportType = await getExportType();
+
+  if (exportType === ExportTypes.PRINT) {
+    const totalParts = secretsWithShares.length;
+    let secretCount = 1;
+
+    for (const { shares } of secretsWithShares) {
+      console.log(
+        `\n\n============== Secret (${secretCount}/${totalParts}) ==============\n`,
+      );
+
+      const totalShares = shares.length;
+
+      for (let i = 0; i < shares.length; i++) {
+        const share = shares[i];
+        const password = passwords[i];
+
+        console.log(
+          `=== Share ${
+            i + 1
+          }/${totalShares} of Secret ${secretCount}/${totalParts} ===\n`,
+        );
+
+        const encrypted = await aesGcmEncrypt({ plaintext: share, password });
+
+        const decrypted = await aesGcmDecrypt({
+          ciphertext: encrypted,
+          password,
+        });
+
+        // verify encryption-decryption works
+        if (new TextDecoder().decode(share) !== decrypted) {
+          console.error("AES Encryption algorithm failed.");
+          Deno.exit(1);
+        }
+
+        console.log(encrypted);
+
+        console.log("\n\n");
+      }
+
+      console.log(
+        `\n========== End of Secret (${secretCount}/${totalParts}) ==========\n`,
+      );
+
+      secretCount++;
+    }
+  } else if (exportType === ExportTypes.SAVE) {
+    const newDirectoryPath = `data/${Date.now()}`;
+
+    Deno.mkdirSync(newDirectoryPath, { recursive: true });
+
+    const exportedShares: { [key: string]: string[] } = {};
+
+    for (let i = 0; i < secretsWithShares.length; i++) {
+      for (let j = 0; j < secretsWithShares[i].shares.length; j++) {
+        const share = secretsWithShares[i].shares[j];
+        const password = passwords[j];
+
+        const key = `share_${j + 1}`;
+
+        if (!exportedShares[key]) {
+          exportedShares[key] = [];
+        }
+
+        const encrypted = await aesGcmEncrypt({ plaintext: share, password });
+
+        const decrypted = await aesGcmDecrypt({
+          ciphertext: encrypted,
+          password,
+        });
+
+        // verify encryption-decryption works
+        if (new TextDecoder().decode(share) !== decrypted) {
+          console.error("AES Encryption algorithm failed.");
+          Deno.exit(1);
+        }
+
+        exportedShares[key].push(encrypted);
+      }
+    }
+
+    Deno.writeFileSync(
+      `${newDirectoryPath}/export.json`,
+      new TextEncoder().encode(JSON.stringify(exportedShares, null, 2)),
+    );
+  }
+
+  console.log("Done.");
+  Deno.exit(0);
+}
+
+function getExportType() {
+  return Select.prompt({
+    message: "Select an option",
+    options: [
+      Select.separator("--------"),
+      { name: "Save the shares as files", value: ExportTypes.SAVE },
+      Select.separator("--------"),
+      { name: "Print the shares to the console", value: ExportTypes.PRINT },
+    ],
+  }) as Promise<ExportTypes>;
 }
