@@ -4,6 +4,7 @@ import { encode, decode } from "./encoding/base64.ts";
 import { zeroPadBy64 } from "./_utils/zero-pad.ts";
 import { directoryExists } from "./_utils/fs.ts";
 import { aesGcmDecrypt, aesGcmEncrypt } from "./aes-encryption/mod.ts";
+import { writeText as copyTextToClipboard } from "./copy_paste/mod.ts";
 
 enum ExportTypes {
   SAVE = "save",
@@ -118,15 +119,17 @@ const bytes = new Uint8Array(retrievedSecret.length);
 
 bytes.set(retrievedSecret, 0);
 
+let retrievedSecretString = new TextDecoder().decode(bytes);
+
+const endIndex = retrievedSecretString.split("").findIndex((x) => {
+  return x.charCodeAt(0) === 0;
+});
+
+retrievedSecretString = retrievedSecretString.slice(0, endIndex);
+
 if (secretFromInput) {
-  const retrievedSecretString = new TextDecoder().decode(bytes);
-
-  const endIndex = retrievedSecretString.split("").findIndex((x) => {
-    return x.charCodeAt(0) === 0;
-  });
-
   if (endIndex !== -1) {
-    if (retrievedSecretString.slice(0, endIndex) !== secretFromInput) {
+    if (retrievedSecretString !== secretFromInput) {
       console.error("The algorithom will fail to recover secret.");
       Deno.exit(1);
     }
@@ -210,10 +213,6 @@ if (!shouldEncryptSharesOneByOne) {
         new TextEncoder().encode(JSON.stringify(exportedShares, null, 2)),
       );
     }
-
-    console.log("Done.");
-
-    Deno.exit(0);
   } else {
     // encrypt all shares with a single password
 
@@ -309,7 +308,6 @@ if (!shouldEncryptSharesOneByOne) {
   }
 
   console.log("Done.");
-  Deno.exit(0);
 } else {
   // encrypt each share one by one
 
@@ -414,7 +412,28 @@ if (!shouldEncryptSharesOneByOne) {
   }
 
   console.log("Done.");
-  Deno.exit(0);
+}
+
+console.log("\n\n");
+
+let secretToBeCopied = retrievedSecretString;
+
+const shouldEncodeSecret = await Confirm.prompt({
+  message: "Do you want to encode the secret using base64 encoding?",
+  default: false,
+});
+
+if (shouldEncodeSecret) {
+  secretToBeCopied = encode(secretToBeCopied);
+}
+
+const shouldCopySecret = await Confirm.prompt({
+  message: "Do you want to copy the secret to the clipboard?",
+  default: false,
+});
+
+if (shouldCopySecret) {
+  await copyTextToClipboard(secretToBeCopied);
 }
 
 function getExportType() {
