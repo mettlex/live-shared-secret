@@ -25,7 +25,7 @@ for (let i = 0; i < partCount; i++) {
   for (let j = 0; j < shareCount; j++) {
     parts[i].push(
       await Secret.prompt({
-        message: `Enter password share ${j + 1}`,
+        message: `Enter secret share #${j + 1}`,
       }),
     );
   }
@@ -58,6 +58,7 @@ console.log(`\nSecret recovered successfully.\n`);
 enum ActionTypes {
   COPY = "copy",
   PRINT = "print",
+  NOTHING = "nothing",
 }
 
 const action = (await Select.prompt({
@@ -67,6 +68,8 @@ const action = (await Select.prompt({
     { name: "Copy the secret to the clipboard", value: ActionTypes.COPY },
     Select.separator("--------"),
     { name: "Print the secret to the console", value: ActionTypes.PRINT },
+    Select.separator("--------"),
+    { name: "Do nothing", value: ActionTypes.NOTHING },
   ],
 })) as ActionTypes;
 
@@ -76,6 +79,8 @@ if (action === ActionTypes.PRINT) {
 } else if (action === ActionTypes.COPY) {
   await writeText(retrievedSecretString);
   console.log("Secret copied.");
+} else {
+  console.log("Okay.");
 }
 
 console.log("\n\n");
