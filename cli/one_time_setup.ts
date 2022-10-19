@@ -193,7 +193,32 @@ if (!shouldEncryptSharesOneByOne) {
 
         secretCount++;
       }
+    } else if (exportType === ExportTypes.SAVE) {
+      const newDirectoryPath = `data/${Date.now()}`;
+
+      Deno.mkdirSync(newDirectoryPath, { recursive: true });
+
+      const exportedShares: { [key: string]: string[] } = {};
+
+      for (let i = 0; i < secretsWithShares.length; i++) {
+        secretsWithShares[i].shares.forEach((share, j) => {
+          const key = `share_${j + 1}`;
+
+          if (!exportedShares[key]) {
+            exportedShares[key] = [];
+          }
+
+          exportedShares[key].push(encode(share));
+        });
+      }
+
+      Deno.writeFileSync(
+        `${newDirectoryPath}/export.json`,
+        new TextEncoder().encode(JSON.stringify(exportedShares, null, 2)),
+      );
     }
+
+    console.log("Done.");
 
     Deno.exit(0);
   }
