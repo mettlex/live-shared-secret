@@ -1,7 +1,8 @@
 import { combineShares } from "../sss-wasm/index.js";
-import { Number, Secret, Select } from "./prompt/mod.ts";
+import { Number, Secret, Select, Confirm } from "./prompt/mod.ts";
 import { decode } from "./encoding/base64.ts";
 import { writeText } from "./copy_paste/mod.ts";
+import { aesGcmDecryptToUint8 } from "./aes-encryption/mod.ts";
 
 const partCount = await Number.prompt({
   message: "How many parts of the secret",
@@ -12,6 +13,39 @@ const shareCount = await Number.prompt({
   message: "Minimum number of shares for each part",
   min: 2,
 });
+
+const sharesEncryptedWithDiffPasswords = await Confirm.prompt({
+  message: "Is each share encrypted with a different password?",
+  default: true,
+});
+
+let sharesEncryptedWithSinglePassword = false;
+
+if (!sharesEncryptedWithDiffPasswords) {
+  sharesEncryptedWithSinglePassword = await Confirm.prompt({
+    message: "Are the shares encrypted with a single password?",
+    default: false,
+  });
+}
+
+let password: string;
+const passwords: string[] = [];
+
+if (sharesEncryptedWithSinglePassword) {
+  password = await Secret.prompt({
+    message: "Enter the password",
+  });
+} else if (sharesEncryptedWithDiffPasswords) {
+  for (let i = 0; i < shareCount; i++) {
+    const serial = i + 1;
+
+    const password = await Secret.prompt({
+      message: `Enter the password for share #${serial}`,
+    });
+
+    passwords.push(password);
+  }
+}
 
 const parts: string[][] = [];
 
@@ -31,13 +65,59 @@ for (let i = 0; i < partCount; i++) {
   }
 }
 
-const retrievedSecret = (
-  await Promise.all(
-    parts.map(async (shares) =>
-      Array.from(await combineShares(shares.map((share) => decode(share)))),
-    ),
-  )
-).flat();
+let retrievedSecret;
+
+if (sharesEncryptedWithDiffPasswords) {
+  retrievedSecret = (
+    await Promise.all(
+      parts.map(async (encyptedShares) =>
+        Array.from(
+          await combineShares(
+            await Promise.all(
+              encyptedShares.map(async (es, i) => {
+                const decrypted = await aesGcmDecryptToUint8({
+                  ciphertext: es,
+                  password: passwords[i],
+                });
+
+                return decrypted;
+              }),
+            ),
+          ),
+        ),
+      ),
+    )
+  ).flat();
+} else if (sharesEncryptedWithSinglePassword) {
+  retrievedSecret = (
+    await Promise.all(
+      parts.map(async (encyptedShares) =>
+        Array.from(
+          await combineShares(
+            await Promise.all(
+              encyptedShares.map(async (es) => {
+                const decrypted = await aesGcmDecryptToUint8({
+                  ciphertext: es,
+                  password,
+                });
+
+                return decrypted;
+              }),
+            ),
+          ),
+        ),
+      ),
+    )
+  ).flat();
+} else {
+  retrievedSecret = (
+    await Promise.all(
+      parts.map(async (shares) =>
+        Array.from(await combineShares(shares.map((share) => decode(share)))),
+      ),
+    )
+  ).flat();
+}
 
 const bytes = new Uint8Array(retrievedSecret.length);
 
