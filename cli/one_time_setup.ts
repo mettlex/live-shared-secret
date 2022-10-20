@@ -5,6 +5,7 @@ import { zeroPadBy64 } from "./_utils/zero-pad.ts";
 import { directoryExists } from "./_utils/fs.ts";
 import { aesGcmDecrypt, aesGcmEncrypt } from "./aes-encryption/mod.ts";
 import { writeText as copyTextToClipboard } from "./copy_paste/mod.ts";
+import { red } from "./fmt/colors.ts";
 
 enum ExportTypes {
   SAVE = "save",
@@ -67,7 +68,7 @@ const createShareUpto64 = async ({
 
   // Check if recovery possible in future
   if (decode(encodedSecret).join("") !== secret64.join("")) {
-    console.error("The algorithom will fail to recover secret.");
+    console.error(red("The algorithom will fail to recover secret."));
     Deno.exit(1);
   }
 
@@ -81,7 +82,7 @@ const createShareUpto64 = async ({
 
   // Check if recovery possible in future
   if (encodedSecret !== encodedResult) {
-    console.error("The algorithom will fail to recover secret.");
+    console.error(red("The algorithom will fail to recover secret."));
     Deno.exit(1);
   }
 
@@ -129,7 +130,7 @@ retrievedSecretString = retrievedSecretString.slice(0, endIndex);
 if (secretFromInput) {
   if (endIndex !== -1) {
     if (retrievedSecretString !== secretFromInput) {
-      console.error("The algorithom will fail to recover secret.");
+      console.error(red("The algorithom will fail to recover secret."));
       Deno.exit(1);
     }
   }
@@ -215,9 +216,27 @@ if (!shouldEncryptSharesOneByOne) {
   } else {
     // encrypt all shares with a single password
 
-    const password = await Secret.prompt({
-      message: "Enter the password for the AES encryption",
+    let password, confirmedPassword;
+
+    password = await Secret.prompt({
+      message: "Enter the password for the encryption",
     });
+
+    confirmedPassword = await Secret.prompt({
+      message: "Re-enter the same password",
+    });
+
+    while (password !== confirmedPassword) {
+      console.error(red("The passwords didn't match. Let's do this again."));
+
+      password = await Secret.prompt({
+        message: "Enter the password for the encryption",
+      });
+
+      confirmedPassword = await Secret.prompt({
+        message: "Re-enter the same password",
+      });
+    }
 
     const exportType = await getExportType();
 
@@ -250,7 +269,7 @@ if (!shouldEncryptSharesOneByOne) {
 
           // verify encryption-decryption works
           if (new TextDecoder().decode(share) !== decrypted) {
-            console.error("AES Encryption algorithm failed.");
+            console.error(red("AES Encryption algorithm failed."));
             Deno.exit(1);
           }
 
@@ -291,7 +310,7 @@ if (!shouldEncryptSharesOneByOne) {
 
           // verify encryption-decryption works
           if (new TextDecoder().decode(share) !== decrypted) {
-            console.error("AES Encryption algorithm failed.");
+            console.error(red("AES Encryption algorithm failed."));
             Deno.exit(1);
           }
 
@@ -315,9 +334,27 @@ if (!shouldEncryptSharesOneByOne) {
   for (let i = 0; i < totalShareCount; i++) {
     const serial = i + 1;
 
-    const password = await Secret.prompt({
+    let password, confirmedPassword;
+
+    password = await Secret.prompt({
       message: `Enter the password for share #${serial}`,
     });
+
+    confirmedPassword = await Secret.prompt({
+      message: `Re-enter the same password for share #${serial}`,
+    });
+
+    while (password !== confirmedPassword) {
+      console.error(red("The passwords didn't match. Let's do this again."));
+
+      password = await Secret.prompt({
+        message: `Enter the password for share #${serial}`,
+      });
+
+      confirmedPassword = await Secret.prompt({
+        message: `Re-enter the same password for share #${serial}`,
+      });
+    }
 
     passwords.push(password);
   }
@@ -354,7 +391,7 @@ if (!shouldEncryptSharesOneByOne) {
 
         // verify encryption-decryption works
         if (new TextDecoder().decode(share) !== decrypted) {
-          console.error("AES Encryption algorithm failed.");
+          console.error(red("AES Encryption algorithm failed."));
           Deno.exit(1);
         }
 
@@ -396,7 +433,7 @@ if (!shouldEncryptSharesOneByOne) {
 
         // verify encryption-decryption works
         if (new TextDecoder().decode(share) !== decrypted) {
-          console.error("AES Encryption algorithm failed.");
+          console.error(red("AES Encryption algorithm failed."));
           Deno.exit(1);
         }
 
