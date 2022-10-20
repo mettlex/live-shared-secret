@@ -122,7 +122,9 @@ app.use(async (ctx, next) => {
   const token = ctx.request.headers.get("API_ACCESS_TOKEN");
 
   if (!token || token !== Deno.env.get("API_ACCESS_TOKEN")) {
-    return ctx.throw(Status.Forbidden);
+    ctx.response.status = Status.Forbidden;
+    ctx.response.body = "";
+    return;
   } else {
     await next();
   }
