@@ -1,5 +1,6 @@
 export const routes = {
   ROOT: "/",
-  GET_ROOM_PUBLIC_KEY: "/room/get-public-key",
-  SET_ROOM_PUBLIC_KEY: "/room/set-public-key",
+  GET_ROOM: "/room",
+  SET_MIN_SHARE_COUNT: "/room/set-min-share-count",
+  ADD_ENCRYPTED_SHARE: "/room/add-encrypted-share",
 };
