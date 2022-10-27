@@ -1,11 +1,6 @@
-## <center>Supercharged Next.js Template</center>
+### Environment Variables
 
-### What's included?
-
-- [XState](https://github.com/statelyai/xstate) for State Machines & Statecharts
-- [Mantine](https://github.com/mantinedev/mantine) UI Components & Hooks
-- Mobile Responsive [App Shell](./components/AppShell/)
-- Dark/Light Mode
+Check [.env.example](./.env.example) file.
 
 ### Getting Started
 

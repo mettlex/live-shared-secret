@@ -9,7 +9,12 @@ export default class _Document extends Document {
   render() {
     return (
       <Html>
-        <Head />
+        <Head>
+          <meta
+            name="viewport"
+            content="width=device-width, user-scalable=no"
+          />
+        </Head>
         <body>
           <Main />
           <NextScript />

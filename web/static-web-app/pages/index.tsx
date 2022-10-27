@@ -23,8 +23,9 @@ const Home: NextPage = () => {
       <Stack align="center" justify="center">
         <Button
           style={{ width: "200px" }}
+          variant="gradient"
+          gradient={{ from: "blue", to: "purple" }}
           size="lg"
-          variant="light"
           onClick={() => {
             setRoomId(crypto.randomUUID());
             setFormShowed(true);
@@ -35,8 +36,9 @@ const Home: NextPage = () => {
 
         <Button
           style={{ width: "200px" }}
+          variant="gradient"
+          gradient={{ from: "darkblue", to: "purple" }}
           size="lg"
-          variant="filled"
           onClick={() => {
             setFormShowed(true);
           }}

@@ -25,7 +25,22 @@ const appMachine = createMachine({
   states: {
     AppStarted: {
       entry: ["restoreColorScheme"],
-      on: {},
+      on: {
+        SETTINGS_REQUESTED: {
+          target: "Settings",
+        },
+      },
+    },
+    Settings: {
+      entry: ["loadSettingsFromStorage"],
+      on: {
+        SERVERLESS_API_ACCESS_TOKEN_CHANGED: {
+          actions: ["storeServerlessApiAccessToken"],
+        },
+        SERVERLESS_API_BASE_URL_CHANGED: {
+          actions: ["storeServerlessApiBaseUrl"],
+        },
+      },
     },
   },
 });

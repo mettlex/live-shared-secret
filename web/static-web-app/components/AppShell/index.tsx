@@ -7,6 +7,7 @@ import {
   ColorScheme,
 } from "@mantine/core";
 
+import AppNavbar from "./navbar";
 import AppFooter from "./footer";
 import AppHeader from "./header";
 import { GlobalStateContext } from "../../store/global";
@@ -70,6 +71,7 @@ export default function AppShellComponent({ children }: AppShellProps) {
           }}
           navbarOffsetBreakpoint="sm"
           asideOffsetBreakpoint="sm"
+          navbar={<AppNavbar />}
           footer={<AppFooter />}
           header={<AppHeader />}
         >

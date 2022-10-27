@@ -5,6 +5,9 @@ import {
   storeColorScheme,
   setNavOpen,
   setNavClosed,
+  loadSettingsFromStorage,
+  storeServerlessApiAccessToken,
+  storeServerlessApiBaseUrl,
 } from "./actions";
 import {} from "./services";
 
@@ -16,6 +19,10 @@ export default machineDef.withConfig({
 
     setNavOpen,
     setNavClosed,
+
+    loadSettingsFromStorage,
+    storeServerlessApiAccessToken,
+    storeServerlessApiBaseUrl,
   },
   services: {},
 });

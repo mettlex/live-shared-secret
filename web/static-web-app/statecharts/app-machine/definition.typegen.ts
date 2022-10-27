@@ -12,21 +12,27 @@ export interface Typegen0 {
       | "storeColorScheme"
       | "setNavOpen"
       | "setNavClosed"
-      | "restoreColorScheme";
+      | "storeServerlessApiAccessToken"
+      | "storeServerlessApiBaseUrl"
+      | "restoreColorScheme"
+      | "loadSettingsFromStorage";
     services: never;
     guards: never;
     delays: never;
   };
   eventsCausingActions: {
     changeColorScheme: "COLOR_SCHEME_CHANGED";
+    loadSettingsFromStorage: "SETTINGS_REQUESTED";
     restoreColorScheme: "xstate.init";
     setNavClosed: "CLOSED_NAV";
     setNavOpen: "OPENED_NAV";
     storeColorScheme: "COLOR_SCHEME_CHANGED";
+    storeServerlessApiAccessToken: "SERVERLESS_API_ACCESS_TOKEN_CHANGED";
+    storeServerlessApiBaseUrl: "SERVERLESS_API_BASE_URL_CHANGED";
   };
   eventsCausingServices: {};
   eventsCausingGuards: {};
   eventsCausingDelays: {};
-  matchesStates: "AppStarted";
+  matchesStates: "AppStarted" | "Settings";
   tags: never;
 }

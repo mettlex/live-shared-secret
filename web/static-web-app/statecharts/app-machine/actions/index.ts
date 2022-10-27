@@ -6,7 +6,11 @@ import {
   ContextFrom,
   EventFrom,
 } from "xstate";
-import { COLOR_SCHEME_KEY_FOR_STORAGE } from "../../../constants";
+import {
+  COLOR_SCHEME_KEY_FOR_STORAGE,
+  SETTINGS_KEY_FOR_STORAGE,
+} from "../../../constants";
+import { AppSettings } from "../../../types";
 import appMachine from "../definition";
 
 type Ctx = ContextFrom<typeof appMachine>;
@@ -19,6 +23,58 @@ type Action =
       event: Evt,
       meta: ActionMeta<Ctx, Evt, BaseActionObject>,
     ) => void);
+
+export const loadSettingsFromStorage: Action = assign(() => {
+  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+    const settingsJson = localStorage.getItem(SETTINGS_KEY_FOR_STORAGE);
+
+    if (settingsJson) {
+      const settings = JSON.parse(settingsJson) as AppSettings;
+
+      return {
+        ...settings,
+      };
+    }
+  }
+
+  return {};
+});
+
+export const storeServerlessApiAccessToken: Action = (_context, event) => {
+  if (
+    event.type === "SERVERLESS_API_ACCESS_TOKEN_CHANGED" &&
+    typeof localStorage !== "undefined"
+  ) {
+    const settingsJson = localStorage.getItem(SETTINGS_KEY_FOR_STORAGE) || "{}";
+
+    const settings = JSON.parse(settingsJson) as AppSettings;
+
+    const newSettings: AppSettings = {
+      ...settings,
+      serverlessApiAccessToken: event.data,
+    };
+
+    localStorage.setItem(SETTINGS_KEY_FOR_STORAGE, JSON.stringify(newSettings));
+  }
+};
+
+export const storeServerlessApiBaseUrl: Action = (_context, event) => {
+  if (
+    event.type === "SERVERLESS_API_BASE_URL_CHANGED" &&
+    typeof localStorage !== "undefined"
+  ) {
+    const settingsJson = localStorage.getItem(SETTINGS_KEY_FOR_STORAGE) || "{}";
+
+    const settings = JSON.parse(settingsJson) as AppSettings;
+
+    const newSettings: AppSettings = {
+      ...settings,
+      serverlessApiBaseUrl: event.data,
+    };
+
+    localStorage.setItem(SETTINGS_KEY_FOR_STORAGE, JSON.stringify(newSettings));
+  }
+};
 
 export const restoreColorScheme: Action = assign(() => {
   if (typeof window !== "undefined" && typeof localStorage !== "undefined") {

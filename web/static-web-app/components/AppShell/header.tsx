@@ -45,7 +45,7 @@ const AppHeader = () => {
         </MediaQuery>
 
         <MediaQuery largerThan="sm" styles={{ flexGrow: 1 }}>
-          <Group position="center">
+          <Group position="left">
             <Stack spacing="xs">
               <Text weight="bold">Live Shared Secret</Text>
             </Stack>

@@ -1,7 +1,12 @@
+export type AppSettings = {
+  serverlessApiAccessToken: string;
+  serverlessApiBaseUrl: string;
+};
+
 export type AppContext = {
   colorScheme: "dark" | "light";
   isNavOpen: boolean;
-};
+} & AppSettings;
 
 export type AppEvent =
   | {
@@ -16,4 +21,15 @@ export type AppEvent =
     }
   | {
       type: "CLOSED_NAV";
+    }
+  | {
+      type: "SERVERLESS_API_ACCESS_TOKEN_CHANGED";
+      data: string;
+    }
+  | {
+      type: "SERVERLESS_API_BASE_URL_CHANGED";
+      data: string;
+    }
+  | {
+      type: "SETTINGS_REQUESTED";
     };
