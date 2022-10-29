@@ -14,11 +14,6 @@ import {
 
 const router = new Router();
 
-router.use((context, next) => {
-  context.response.headers.set("Access-Control-Allow-Origin", "*");
-  next();
-});
-
 router.get(routes.ROOT, (ctx) => {
   ctx.response.body = routes;
 });
@@ -272,6 +267,11 @@ app.use(async (ctx, next) => {
   } else {
     await next();
   }
+});
+
+app.use(async (context, next) => {
+  await next();
+  context.response.headers.set("Access-Control-Allow-Origin", "*");
 });
 
 app.use(router.routes());
