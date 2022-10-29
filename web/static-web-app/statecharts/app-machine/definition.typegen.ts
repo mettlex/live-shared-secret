@@ -12,18 +12,22 @@ export interface Typegen0 {
       | "storeColorScheme"
       | "setNavOpen"
       | "setNavClosed"
+      | "loadSettingsFromStorage"
       | "storeServerlessApiAccessToken"
       | "storeServerlessApiBaseUrl"
-      | "restoreColorScheme"
-      | "loadSettingsFromStorage";
+      | "restoreColorScheme";
     services: never;
     guards: never;
     delays: never;
   };
   eventsCausingActions: {
     changeColorScheme: "COLOR_SCHEME_CHANGED";
-    loadSettingsFromStorage: "SETTINGS_REQUESTED";
-    restoreColorScheme: "xstate.init";
+    loadSettingsFromStorage:
+      | "GO_HOME"
+      | "ROOM_REQUESTED"
+      | "SETTINGS_PAGE_REQUESTED"
+      | "SETTINGS_REQUESTED";
+    restoreColorScheme: "GO_HOME" | "xstate.init";
     setNavClosed: "CLOSED_NAV";
     setNavOpen: "OPENED_NAV";
     storeColorScheme: "COLOR_SCHEME_CHANGED";
@@ -33,6 +37,6 @@ export interface Typegen0 {
   eventsCausingServices: {};
   eventsCausingGuards: {};
   eventsCausingDelays: {};
-  matchesStates: "AppStarted" | "Settings";
+  matchesStates: "Home" | "Room" | "Settings" | "SettingsLoaded";
   tags: never;
 }

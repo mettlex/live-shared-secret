@@ -10,7 +10,8 @@ import { IconLink, IconLock } from "@tabler/icons";
 import { useActor } from "@xstate/react";
 import type { NextPage } from "next";
 import Head from "next/head";
-import { useContext, useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { GlobalStateContext } from "../store/global";
 
 let defaultServerlessBaseUrls = [
@@ -29,50 +30,67 @@ if (typeof process.env.NEXT_PUBLIC_SERVERLESS_BASE_URLS === "string") {
 }
 
 const Settings: NextPage = () => {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [isCustom, setIsCustom] = useState(false);
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
+  const [saved, setSaved] = useState(false);
 
   const { context } = state;
 
-  console.log(context);
-
-  const data: SelectItem[] =
-    context.serverlessApiBaseUrl &&
-    !defaultServerlessBaseUrls.find(
-      (x) => x.value === context.serverlessApiBaseUrl,
-    )
-      ? [
-          {
-            value: context.serverlessApiBaseUrl,
-            label: context.serverlessApiBaseUrl,
-          },
-          ...defaultServerlessBaseUrls.concat({
+  const data: SelectItem[] = useMemo(
+    () =>
+      context.serverlessApiBaseUrl &&
+      !defaultServerlessBaseUrls.find(
+        (x) => x.value === context.serverlessApiBaseUrl,
+      )
+        ? [
+            {
+              value: context.serverlessApiBaseUrl,
+              label: context.serverlessApiBaseUrl,
+            },
+            ...defaultServerlessBaseUrls.concat({
+              value: "custom",
+              label: "Custom",
+            }),
+          ]
+        : defaultServerlessBaseUrls.concat({
             value: "custom",
             label: "Custom",
           }),
-        ]
-      : defaultServerlessBaseUrls.concat({
-          value: "custom",
-          label: "Custom",
-        });
+    [context.serverlessApiBaseUrl],
+  );
 
   useEffect(() => {
-    setToken(context.serverlessApiAccessToken);
-    setBaseUrl(context.serverlessApiBaseUrl);
-  }, [context.serverlessApiAccessToken, context.serverlessApiBaseUrl]);
+    if (context.serverlessApiAccessToken) {
+      setToken(context.serverlessApiAccessToken);
+    }
+  }, [context.serverlessApiAccessToken]);
 
   useEffect(() => {
-    send("SETTINGS_REQUESTED");
+    if (context.serverlessApiBaseUrl) {
+      setBaseUrl(context.serverlessApiBaseUrl);
+    }
+  }, [context.serverlessApiBaseUrl]);
+
+  useEffect(() => {
+    send("SETTINGS_PAGE_REQUESTED");
   }, [send]);
+
+  useEffect(() => {
+    if (data[0]?.value) {
+      setBaseUrl(data[0].value);
+    }
+  }, [data]);
+
+  console.log(state.value);
 
   return (
     <>
       <Head>
         <title>Settings | Live Shared Secret</title>
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <Stack align="center" justify="center">
@@ -117,6 +135,7 @@ const Settings: NextPage = () => {
 
         {isCustom && (
           <TextInput
+            type="url"
             label="Custom Base URL"
             placeholder="Type the URL with https:// prefix here"
             icon={<IconLink size={14} />}
@@ -138,25 +157,50 @@ const Settings: NextPage = () => {
         )}
 
         <Button
+          mt="xl"
+          style={{ width: "100%", maxWidth: "400px" }}
           variant="gradient"
-          gradient={{ from: "blue", to: "purple" }}
-          size="sm"
+          gradient={{ from: "darkblue", to: "purple" }}
           onClick={() => {
-            send({
-              type: "SERVERLESS_API_ACCESS_TOKEN_CHANGED",
-              data: token,
-            });
-
-            if (baseUrl !== "custom") {
+            if (token && baseUrl) {
               send({
-                type: "SERVERLESS_API_BASE_URL_CHANGED",
-                data: baseUrl,
+                type: "SERVERLESS_API_ACCESS_TOKEN_CHANGED",
+                data: token,
               });
+
+              if (baseUrl !== "custom") {
+                send({
+                  type: "SERVERLESS_API_BASE_URL_CHANGED",
+                  data: baseUrl,
+                });
+              }
+
+              const tid = setTimeout(() => {
+                setSaved(true);
+                clearTimeout(tid);
+              }, 1000);
             }
           }}
         >
           Save
         </Button>
+
+        {saved && (
+          <Button
+            style={{ width: "100%", maxWidth: "400px" }}
+            variant="gradient"
+            gradient={{ from: "blue", to: "purple" }}
+            onClick={() => {
+              send({
+                type: "GO_HOME",
+              });
+
+              router.push("/");
+            }}
+          >
+            Go Back
+          </Button>
+        )}
       </Stack>
     </>
   );

@@ -5,7 +5,7 @@ const appMachine = createMachine({
   id: "App",
   strict: true,
   predictableActionArguments: true,
-  initial: "AppStarted",
+  initial: "Home",
   context: {} as AppContext,
   on: {
     COLOR_SCHEME_CHANGED: {
@@ -17,30 +17,47 @@ const appMachine = createMachine({
     CLOSED_NAV: {
       actions: ["setNavClosed"],
     },
+    GO_HOME: {
+      actions: ["loadSettingsFromStorage"],
+      target: "Home",
+    },
+    SERVERLESS_API_ACCESS_TOKEN_CHANGED: {
+      actions: ["storeServerlessApiAccessToken"],
+    },
+    SERVERLESS_API_BASE_URL_CHANGED: {
+      actions: ["storeServerlessApiBaseUrl"],
+    },
   },
   tsTypes: {} as import("./definition.typegen").Typegen0,
   schema: {
     events: {} as AppEvent,
   },
   states: {
-    AppStarted: {
+    Home: {
       entry: ["restoreColorScheme"],
       on: {
-        SETTINGS_REQUESTED: {
+        SETTINGS_PAGE_REQUESTED: {
           target: "Settings",
+        },
+        SETTINGS_REQUESTED: {
+          actions: ["loadSettingsFromStorage"],
+          target: "SettingsLoaded",
+        },
+      },
+    },
+    SettingsLoaded: {
+      on: {
+        ROOM_REQUESTED: {
+          target: "Room",
         },
       },
     },
     Settings: {
       entry: ["loadSettingsFromStorage"],
-      on: {
-        SERVERLESS_API_ACCESS_TOKEN_CHANGED: {
-          actions: ["storeServerlessApiAccessToken"],
-        },
-        SERVERLESS_API_BASE_URL_CHANGED: {
-          actions: ["storeServerlessApiBaseUrl"],
-        },
-      },
+    },
+    Room: {
+      entry: ["loadSettingsFromStorage"],
+      on: {},
     },
   },
 });

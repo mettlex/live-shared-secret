@@ -29,6 +29,10 @@ const AppNavbar = () => {
             active={pathname === "/"}
             onClick={() => {
               send("CLOSED_NAV");
+
+              send({
+                type: "GO_HOME",
+              });
             }}
           />
         </Link>

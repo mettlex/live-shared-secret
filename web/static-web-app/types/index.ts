@@ -32,4 +32,13 @@ export type AppEvent =
     }
   | {
       type: "SETTINGS_REQUESTED";
+    }
+  | {
+      type: "SETTINGS_PAGE_REQUESTED";
+    }
+  | {
+      type: "ROOM_REQUESTED";
+    }
+  | {
+      type: "GO_HOME";
     };
