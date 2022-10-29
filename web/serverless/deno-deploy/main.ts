@@ -16,7 +16,7 @@ import {
 const cors = () =>
   oakCors({
     origin: "*",
-    methods: "GET,POST",
+    methods: "GET,POST,OPTIONS",
     credentials: true,
   });
 
