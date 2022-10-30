@@ -11,6 +11,7 @@ import {
   Room,
   SetMinShareCountRequestBody,
 } from "./types.ts";
+import cors from "./cors.ts";
 
 const router = new Router();
 
@@ -256,22 +257,27 @@ router.post(routes.SET_MIN_SHARE_COUNT, async (ctx) => {
 
 const app = new Application();
 
+app.use(async (context, next) => {
+  cors(context);
+  await next();
+});
+
 // auth middleware
 app.use(async (ctx, next) => {
-  const token = ctx.request.headers.get("API_ACCESS_TOKEN");
+  const token =
+    ctx.request.headers.get("API_ACCESS_TOKEN") ||
+    ctx.request.headers.get("api_access_token");
 
-  if (!token || token !== Deno.env.get("API_ACCESS_TOKEN")) {
+  if (
+    ctx.request.method !== "OPTIONS" &&
+    (!token || token !== Deno.env.get("API_ACCESS_TOKEN"))
+  ) {
     ctx.response.status = Status.Forbidden;
     ctx.response.body = "";
     return;
   } else {
     await next();
   }
-});
-
-app.use(async (context, next) => {
-  await next();
-  context.response.headers.set("Access-Control-Allow-Origin", "*");
 });
 
 app.use(router.routes());
