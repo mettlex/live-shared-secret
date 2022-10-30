@@ -13,7 +13,8 @@ const Home: NextPage = () => {
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
 
-  const { serverlessApiAccessToken, serverlessApiBaseUrl } = state.context;
+  const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
+    state.context;
 
   useEffect(() => {
     send({
@@ -23,7 +24,7 @@ const Home: NextPage = () => {
 
   if (
     (state.matches("SettingsLoaded") || state.matches("Settings")) &&
-    (!serverlessApiAccessToken || !serverlessApiBaseUrl)
+    (!token || !url)
   ) {
     router.push("/settings");
   }
@@ -38,11 +39,46 @@ const Home: NextPage = () => {
 
       <Stack align="center" justify="center" style={{ height: "100%" }}>
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
 
             if (roomId.length > 9 && roomId.length < 101) {
               try {
+                const headers = new Headers();
+
+                headers.append("API_ACCESS_TOKEN", token.trim());
+                headers.append("Content-Type", "application/json");
+
+                console.log(Array.from(headers.keys()).join(","));
+
+                headers.append(
+                  "Access-Control-Request-Headers",
+                  Array.from(headers.keys()).join(","),
+                );
+
+                const body = JSON.stringify({
+                  room: {
+                    uuid: `${roomId}`,
+                  },
+                });
+
+                const requestOptions = {
+                  method: "POST",
+                  headers,
+                  body,
+                };
+
+                const response = await fetch(`${url}/room`, requestOptions);
+
+                const data = (await response.json()) as Partial<{
+                  success: boolean;
+                  message: string;
+                }>;
+
+                if (!data.success && data.message) {
+                  setErrorText(data.message);
+                  return;
+                }
               } catch (error) {
                 console.error(error);
                 return;
