@@ -1,3 +1,8 @@
+export type ErrorResponse = {
+  success: boolean;
+  message: string;
+};
+
 export type PublicShare = {
   encrypted_share_text: string;
   public_key: string;

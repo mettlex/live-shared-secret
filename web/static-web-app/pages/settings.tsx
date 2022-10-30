@@ -90,21 +90,19 @@ const Settings: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Settings | Live Shared Secret</title>
+        <title>
+          Settings | {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+        </title>
       </Head>
 
-      <Stack align="center" justify="center">
+      <Stack align="center" justify="center" style={{ height: "80%" }}>
         <PasswordInput
           label="Serverless API Token"
           placeholder="Paste the API access token here"
           icon={<IconLock size={14} />}
           required
           withAsterisk
-          styles={{
-            root: {
-              width: "100%",
-            },
-          }}
+          style={{ width: "80vw", maxWidth: "400px" }}
           value={token}
           onChange={(event) => setToken(event.currentTarget.value)}
         />
@@ -116,11 +114,7 @@ const Settings: NextPage = () => {
           icon={<IconLink size={14} />}
           withAsterisk
           required
-          styles={{
-            root: {
-              width: "100%",
-            },
-          }}
+          style={{ width: "80vw", maxWidth: "400px" }}
           onChange={(value) => {
             if (value === "custom") {
               setIsCustom(true);
@@ -141,11 +135,7 @@ const Settings: NextPage = () => {
             icon={<IconLink size={14} />}
             required
             withAsterisk
-            styles={{
-              root: {
-                width: "100%",
-              },
-            }}
+            style={{ width: "80vw", maxWidth: "400px" }}
             onChange={(event) => {
               const { value } = event.currentTarget;
 
@@ -158,7 +148,7 @@ const Settings: NextPage = () => {
 
         <Button
           mt="xl"
-          style={{ width: "100%", maxWidth: "400px" }}
+          style={{ width: "80vw", maxWidth: "400px" }}
           variant="gradient"
           gradient={{ from: "darkblue", to: "purple" }}
           onClick={() => {

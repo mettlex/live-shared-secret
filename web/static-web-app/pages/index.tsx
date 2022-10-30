@@ -6,7 +6,7 @@ import { useState, useContext, useEffect } from "react";
 import { useActor } from "@xstate/react";
 import { GlobalStateContext } from "../store/global";
 import { getRoomData } from "../utils/api";
-import { RoomData } from "../types";
+import { ErrorResponse, RoomData } from "../types";
 
 const Home: NextPage = () => {
   const [roomId, setRoomId] = useState("");
@@ -36,10 +36,12 @@ const Home: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Live Shared Secret</title>
+        <title>
+          {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+        </title>
       </Head>
 
-      <Stack align="center" justify="center" style={{ height: "100%" }}>
+      <Stack align="center" justify="center" style={{ height: "80%" }}>
         <form
           onSubmit={async (event) => {
             event.preventDefault();
@@ -54,6 +56,12 @@ const Home: NextPage = () => {
                   url,
                   setErrorText,
                 });
+
+                const errorRes = data as ErrorResponse;
+
+                if (!errorRes?.success && errorRes?.message) {
+                  setErrorText(errorRes.message);
+                }
 
                 if (!data || !(data as RoomData).expires_in_seconds) {
                   return;

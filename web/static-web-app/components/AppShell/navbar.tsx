@@ -2,7 +2,12 @@ import { useContext } from "react";
 import { Navbar, NavLink, Stack } from "@mantine/core";
 import { GlobalStateContext } from "../../store/global";
 import { useActor } from "@xstate/react";
-import { IconHome2, IconSettings } from "@tabler/icons";
+import {
+  IconCircle,
+  IconCirclePlus,
+  IconHome2,
+  IconSettings,
+} from "@tabler/icons";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
@@ -42,6 +47,17 @@ const AppNavbar = () => {
             label="Settings"
             icon={<IconSettings size={16} stroke={1.5} />}
             active={pathname === "/settings"}
+            onClick={() => {
+              send("CLOSED_NAV");
+            }}
+          />
+        </Link>
+
+        <Link href="/create-room" passHref>
+          <NavLink
+            label="Create Room"
+            icon={<IconCirclePlus size={16} stroke={1.5} />}
+            active={pathname === "/create-room"}
             onClick={() => {
               send("CLOSED_NAV");
             }}

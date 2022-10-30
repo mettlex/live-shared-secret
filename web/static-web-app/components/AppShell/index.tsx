@@ -6,6 +6,7 @@ import {
   ColorSchemeProvider,
   ColorScheme,
 } from "@mantine/core";
+import { useRouter } from "next/router";
 
 import AppNavbar from "./navbar";
 import AppFooter from "./footer";
@@ -22,6 +23,8 @@ export default function AppShellComponent({ children }: AppShellProps) {
   const [colorScheme, setColorScheme] = useState<ColorScheme>("dark");
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
+
+  const router = useRouter();
 
   const { context } = state;
   const { colorScheme: colorSchemeInContext } = context;
@@ -72,7 +75,7 @@ export default function AppShellComponent({ children }: AppShellProps) {
           navbarOffsetBreakpoint="sm"
           asideOffsetBreakpoint="sm"
           navbar={<AppNavbar />}
-          footer={<AppFooter />}
+          footer={router.pathname === "/" ? <AppFooter /> : undefined}
           header={<AppHeader />}
         >
           {children}

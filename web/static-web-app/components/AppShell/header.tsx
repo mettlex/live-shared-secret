@@ -47,7 +47,9 @@ const AppHeader = () => {
         <MediaQuery largerThan="sm" styles={{ flexGrow: 1 }}>
           <Group position="left">
             <Stack spacing="xs">
-              <Text weight="bold">Live Shared Secret</Text>
+              <Text weight="bold">
+                {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+              </Text>
             </Stack>
           </Group>
         </MediaQuery>

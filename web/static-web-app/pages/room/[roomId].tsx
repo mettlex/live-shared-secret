@@ -6,6 +6,7 @@ import {
   Modal,
   RingProgress,
   Text,
+  Group,
 } from "@mantine/core";
 import { useActor } from "@xstate/react";
 import type { NextPage } from "next";
@@ -90,7 +91,9 @@ const Room: NextPage = () => {
       <Head>
         <meta name="viewport" content="width=device-width, user-scalable=no" />
 
-        <title>Live Shared Secret</title>
+        <title>
+          Room | {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+        </title>
       </Head>
 
       <Stack align="center">
@@ -101,8 +104,8 @@ const Room: NextPage = () => {
             }}
           >
             <Textarea
+              minRows={7}
               style={{ width: "80vw", maxWidth: "400px" }}
-              mb="xl"
               placeholder="Enter the room creator's public key here"
               label="Public Key"
               required
@@ -112,7 +115,6 @@ const Room: NextPage = () => {
 
             <Textarea
               style={{ width: "80vw", maxWidth: "400px" }}
-              mb="xl"
               placeholder="Enter your encrypted share here"
               label="Your Share"
               required
@@ -143,19 +145,44 @@ const Room: NextPage = () => {
         )}
 
         {roomData && (
-          <>
-            <RingProgress
-              sections={[{ value: completedProgress, color: "blue" }]}
-              label={
-                <Text color="blue" weight={700} align="center" size="xl">
-                  {completedProgress}%
+          <Group>
+            <Stack align="center" spacing={0}>
+              <RingProgress
+                sections={[{ value: completedProgress, color: "blue" }]}
+                label={
+                  <Text color="blue" weight={700} align="center" size="xl">
+                    {completedProgress}%
+                  </Text>
+                }
+              />
+              <Text weight="bold" color="blue">
+                Share Progress
+              </Text>
+            </Stack>
+
+            {roomData.expires_in_seconds && roomData.expires_in_seconds > 1 && (
+              <Stack align="center" spacing={0}>
+                <RingProgress
+                  sections={[
+                    {
+                      value: Math.floor(
+                        (100 * (roomData.expires_in_seconds || 0)) / 60,
+                      ),
+                      color: "blue",
+                    },
+                  ]}
+                  label={
+                    <Text color="blue" weight={700} align="center" size="xl">
+                      {roomData.expires_in_seconds || 0}s
+                    </Text>
+                  }
+                />
+                <Text weight="bold" color="blue">
+                  Time Left
                 </Text>
-              }
-            />
-            <Text weight="bold" color="blue">
-              Share Progress
-            </Text>
-          </>
+              </Stack>
+            )}
+          </Group>
         )}
       </Stack>
 
