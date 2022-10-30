@@ -27,6 +27,9 @@ const appMachine = createMachine({
     SERVERLESS_API_BASE_URL_CHANGED: {
       actions: ["storeServerlessApiBaseUrl"],
     },
+    ROOM_REQUESTED: {
+      target: "Room",
+    },
   },
   tsTypes: {} as import("./definition.typegen").Typegen0,
   schema: {
@@ -45,19 +48,12 @@ const appMachine = createMachine({
         },
       },
     },
-    SettingsLoaded: {
-      on: {
-        ROOM_REQUESTED: {
-          target: "Room",
-        },
-      },
-    },
+    SettingsLoaded: {},
     Settings: {
       entry: ["loadSettingsFromStorage"],
     },
     Room: {
       entry: ["loadSettingsFromStorage"],
-      on: {},
     },
   },
 });

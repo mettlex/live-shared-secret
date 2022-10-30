@@ -1,3 +1,14 @@
+export type PublicShare = {
+  encrypted_share_text: string;
+  public_key: string;
+};
+
+export type RoomData = {
+  min_share_count: number;
+  expires_in_seconds: number;
+  encrypted_shares?: PublicShare[];
+};
+
 export type AppSettings = {
   serverlessApiAccessToken: string;
   serverlessApiBaseUrl: string;

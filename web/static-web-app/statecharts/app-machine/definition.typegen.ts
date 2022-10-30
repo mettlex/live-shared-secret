@@ -27,7 +27,7 @@ export interface Typegen0 {
       | "ROOM_REQUESTED"
       | "SETTINGS_PAGE_REQUESTED"
       | "SETTINGS_REQUESTED";
-    restoreColorScheme: "GO_HOME" | "xstate.init";
+    restoreColorScheme: "GO_HOME" | "ROOM_REQUESTED" | "xstate.init";
     setNavClosed: "CLOSED_NAV";
     setNavOpen: "OPENED_NAV";
     storeColorScheme: "COLOR_SCHEME_CHANGED";

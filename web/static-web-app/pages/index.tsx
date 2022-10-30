@@ -5,6 +5,8 @@ import { useRouter } from "next/router";
 import { useState, useContext, useEffect } from "react";
 import { useActor } from "@xstate/react";
 import { GlobalStateContext } from "../store/global";
+import { getRoomData } from "../utils/api";
+import { RoomData } from "../types";
 
 const Home: NextPage = () => {
   const [roomId, setRoomId] = useState("");
@@ -42,41 +44,18 @@ const Home: NextPage = () => {
           onSubmit={async (event) => {
             event.preventDefault();
 
+            setErrorText("");
+
             if (roomId.length > 9 && roomId.length < 101) {
               try {
-                const headers = new Headers();
-
-                headers.append("API_ACCESS_TOKEN", token.trim());
-                headers.append("Content-Type", "application/json");
-
-                console.log(Array.from(headers.keys()).join(","));
-
-                headers.append(
-                  "Access-Control-Request-Headers",
-                  Array.from(headers.keys()).join(","),
-                );
-
-                const body = JSON.stringify({
-                  room: {
-                    uuid: `${roomId}`,
-                  },
+                const data = await getRoomData({
+                  roomId,
+                  token,
+                  url,
+                  setErrorText,
                 });
 
-                const requestOptions = {
-                  method: "POST",
-                  headers,
-                  body,
-                };
-
-                const response = await fetch(`${url}/room`, requestOptions);
-
-                const data = (await response.json()) as Partial<{
-                  success: boolean;
-                  message: string;
-                }>;
-
-                if (!data.success && data.message) {
-                  setErrorText(data.message);
+                if (!data || !(data as RoomData).expires_in_seconds) {
                   return;
                 }
               } catch (error) {
