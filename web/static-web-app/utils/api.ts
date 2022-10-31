@@ -1,3 +1,4 @@
+import { routes } from "../routes";
 import { ErrorResponse, RoomData } from "../types";
 
 export const getRoomData = async ({
@@ -33,7 +34,7 @@ export const getRoomData = async ({
     body,
   };
 
-  const response = await fetch(`${url}/room`, requestOptions);
+  const response = await fetch(`${url}${routes.GET_ROOM}`, requestOptions);
 
   try {
     const data = (await response.json()) as
@@ -101,7 +102,7 @@ export const createRoom = async ({
   };
 
   const response = await fetch(
-    `${url}/room/set-min-share-count`,
+    `${url}${routes.SET_MIN_SHARE_COUNT}`,
     requestOptions,
   );
 
