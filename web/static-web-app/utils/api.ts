@@ -1,4 +1,4 @@
-import { routes } from "../routes";
+import routes from "../routes";
 import { ErrorResponse, RoomData } from "../types";
 
 export const getRoomData = async ({
