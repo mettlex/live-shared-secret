@@ -56,8 +56,6 @@ const Room: NextPage = () => {
     state.context;
 
   const attemptToDecrypt = useCallback(async () => {
-    console.log({ password });
-
     try {
       const decryptedShare = await aesGcmDecryptToUint8({
         ciphertext: encryptedShare,
@@ -75,11 +73,9 @@ const Room: NextPage = () => {
           await generateKeyPair();
 
         const encryptedUsingPbKey = await encryptTextUsingECDHAES({
-          text: new TextDecoder().decode(decryptedShare),
+          text: encodeBase64(decryptedShare),
           derivedKey: await deriveKey({ publicKeyJwk, privateKeyJwk }),
         });
-
-        console.log(JSON.stringify(encryptedUsingPbKey, null, 2));
 
         setEncryptedShareUsingPublicKey(JSON.stringify(encryptedUsingPbKey));
         setOwnPublicKey(encodeBase64(JSON.stringify(ownPbKey)));
@@ -101,11 +97,16 @@ const Room: NextPage = () => {
   }, [roomData]);
 
   useEffect(() => {
-    if (completedProgress === 100) {
+    if (
+      completedProgress === 100 ||
+      (roomData &&
+        roomData.encrypted_shares &&
+        roomData.min_share_count === roomData.encrypted_shares.length)
+    ) {
       clearInterval(intervalRef.current);
       setFormShown(false);
     }
-  }, [completedProgress]);
+  }, [completedProgress, roomData]);
 
   useEffect(() => {
     if (password) {
@@ -286,7 +287,7 @@ const Room: NextPage = () => {
         )}
       </Stack>
 
-      {/* <Modal
+      <Modal
         opened={!!errorText}
         onClose={() => {
           router.push("/");
@@ -295,7 +296,7 @@ const Room: NextPage = () => {
         centered={true}
       >
         {errorText}
-      </Modal> */}
+      </Modal>
     </>
   );
 };

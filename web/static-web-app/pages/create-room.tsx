@@ -4,6 +4,7 @@ import {
   Button,
   Group,
   LoadingOverlay,
+  Modal,
   NumberInput,
   RingProgress,
   Stack,
@@ -11,19 +12,31 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
-import { useState, useContext, useEffect, useRef, useMemo } from "react";
+import {
+  useState,
+  useContext,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useActor } from "@xstate/react";
 import { v4 as uuidv4 } from "uuid";
+import { useRouter } from "next/router";
 
 import { GlobalStateContext } from "../store/global";
 import { createRoom, getRoomData } from "../utils/api";
 import {
-  encode as encode64,
-  decode as decode64,
+  encode as encodeBase64,
+  decode as decodeBase64,
 } from "../utils/encoding/base64";
-import { generateKeyPair } from "../utils/cryptography";
+import {
+  decryptUsingECDHAES,
+  deriveKey,
+  generateKeyPair,
+} from "../utils/cryptography";
+import { combineShares } from "../utils/sss-wasm/index";
 import { RoomData } from "../types";
-import { useRouter } from "next/router";
 
 const CreateRoom: NextPage = () => {
   const [formShown, setFormShown] = useState(true);
@@ -34,10 +47,12 @@ const CreateRoom: NextPage = () => {
   const [errorTextForMinShareCount, setErrorTextForMinShareCount] =
     useState("");
   const [publicKey, setPublicKey] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
+  const [secretText, setSecretText] = useState("");
+  const [privateKeyJwk, setPrivateKeyJwk] = useState<JsonWebKey>();
   const [roomData, setRoomData] = useState<RoomData>();
   const [roomCreated, setRoomCreated] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
+  const [secretCopied, setSecretCopied] = useState(false);
 
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
@@ -55,6 +70,76 @@ const CreateRoom: NextPage = () => {
   ) {
     router.push("/settings?back=/create-room");
   }
+
+  const attemptToDecrypt = useCallback(async () => {
+    if (!roomData?.encrypted_shares || !privateKeyJwk) {
+      return;
+    }
+
+    const shares = await Promise.all(
+      roomData.encrypted_shares.map(async (es) => {
+        const { public_key, encrypted_share_text } = es;
+
+        try {
+          const { base64Data, hexIv } = JSON.parse(encrypted_share_text) as {
+            base64Data: string;
+            hexIv: string;
+          };
+
+          const d = await decryptUsingECDHAES({
+            message: {
+              base64Data,
+              hexIv,
+            },
+            derivedKey: await deriveKey({
+              privateKeyJwk,
+              publicKeyJwk: JSON.parse(
+                new TextDecoder().decode(decodeBase64(public_key)),
+              ),
+            }),
+          });
+
+          return d;
+        } catch (error) {
+          setErrorText(
+            (error as { message: string })?.message || (error as string),
+          );
+        }
+      }),
+    );
+
+    if (!shares.find((s) => !s)) {
+      try {
+        let secret = new TextDecoder().decode(
+          await combineShares(shares.map((x) => decodeBase64(x!))),
+        );
+
+        const endIndex = secret.split("").findIndex((x) => {
+          return x.charCodeAt(0) === 0;
+        });
+
+        if (endIndex !== -1) {
+          secret = secret.slice(0, endIndex);
+        }
+
+        if (secret) {
+          setSecretText(secret);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }, [privateKeyJwk, roomData?.encrypted_shares]);
+
+  useEffect(() => {
+    if (
+      roomData &&
+      roomData.encrypted_shares &&
+      roomData.encrypted_shares.length === roomData.min_share_count
+    ) {
+      attemptToDecrypt();
+    }
+  }, [attemptToDecrypt, roomData]);
 
   const completedProgress = useMemo(() => {
     if (!roomData) {
@@ -131,6 +216,17 @@ const CreateRoom: NextPage = () => {
     return () => clearInterval(intervalRef.current);
   }, [roomCreated, roomId, token, url]);
 
+  useEffect(() => {
+    if (
+      completedProgress === 100 ||
+      (roomData &&
+        roomData.encrypted_shares &&
+        roomData.min_share_count === roomData.encrypted_shares.length)
+    ) {
+      clearInterval(intervalRef.current);
+    }
+  }, [completedProgress, roomData]);
+
   return (
     <>
       <Head>
@@ -204,8 +300,11 @@ const CreateRoom: NextPage = () => {
                 } else {
                   setFormShown(false);
 
-                  setPublicKey(encode64(JSON.stringify(keypair.publicKeyJwk)));
-                  setPrivateKey(JSON.stringify(keypair.privateKeyJwk));
+                  setPublicKey(
+                    encodeBase64(JSON.stringify(keypair.publicKeyJwk)),
+                  );
+
+                  setPrivateKeyJwk(keypair.privateKeyJwk);
 
                   setRoomCreated(true);
                 }
@@ -286,7 +385,7 @@ const CreateRoom: NextPage = () => {
           </form>
         )}
 
-        {roomCreated && roomData && roomId && (
+        {roomCreated && roomData && roomId && completedProgress !== 100 && (
           <TextInput
             style={{ width: "80vw", maxWidth: "400px" }}
             label="Room ID"
@@ -301,7 +400,7 @@ const CreateRoom: NextPage = () => {
           />
         )}
 
-        {roomCreated && roomData && publicKey && (
+        {roomCreated && roomData && publicKey && completedProgress !== 100 && (
           <Textarea
             style={{ width: "80vw", maxWidth: "400px" }}
             minRows={7}
@@ -316,6 +415,41 @@ const CreateRoom: NextPage = () => {
             spellCheck="false"
             onChange={() => {}}
           />
+        )}
+
+        {secretText.length > 0 && (
+          <Stack align="center">
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+
+                await navigator.clipboard.writeText(secretText);
+
+                setSecretCopied(true);
+              }}
+            >
+              <Button
+                type="submit"
+                style={{ width: "80vw", maxWidth: "400px" }}
+                variant="gradient"
+                gradient={{ from: "darkblue", to: "purple" }}
+                size="md"
+              >
+                Copy Secret
+              </Button>
+            </form>
+
+            <Modal
+              opened={secretCopied}
+              onClose={() => {
+                setSecretCopied(false);
+              }}
+              title="Copied!"
+              centered={true}
+            >
+              The secret has been copied the clipboard.
+            </Modal>
+          </Stack>
         )}
 
         {roomData && (
@@ -334,28 +468,30 @@ const CreateRoom: NextPage = () => {
               </Text>
             </Stack>
 
-            {roomData.expires_in_seconds && roomData.expires_in_seconds > 1 && (
-              <Stack align="center" spacing={0}>
-                <RingProgress
-                  sections={[
-                    {
-                      value: Math.floor(
-                        (100 * (roomData.expires_in_seconds || 0)) / 60,
-                      ),
-                      color: "blue",
-                    },
-                  ]}
-                  label={
-                    <Text color="blue" weight={700} align="center" size="xl">
-                      {roomData.expires_in_seconds || 0}s
-                    </Text>
-                  }
-                />
-                <Text weight="bold" color="blue">
-                  Time Left
-                </Text>
-              </Stack>
-            )}
+            {completedProgress !== 100 &&
+              roomData.expires_in_seconds &&
+              roomData.expires_in_seconds > 1 && (
+                <Stack align="center" spacing={0}>
+                  <RingProgress
+                    sections={[
+                      {
+                        value: Math.floor(
+                          (100 * (roomData.expires_in_seconds || 0)) / 60,
+                        ),
+                        color: "blue",
+                      },
+                    ]}
+                    label={
+                      <Text color="blue" weight={700} align="center" size="xl">
+                        {roomData.expires_in_seconds || 0}s
+                      </Text>
+                    }
+                  />
+                  <Text weight="bold" color="blue">
+                    Time Left
+                  </Text>
+                </Stack>
+              )}
           </Group>
         )}
       </Stack>
