@@ -3,6 +3,7 @@ import Head from "next/head";
 import {
   Button,
   Group,
+  LoadingOverlay,
   NumberInput,
   RingProgress,
   Stack,
@@ -22,6 +23,7 @@ import {
 } from "../utils/encoding/base64";
 import { generateKeyPair } from "../utils/cryptography";
 import { RoomData } from "../types";
+import { useRouter } from "next/router";
 
 const CreateRoom: NextPage = () => {
   const [formShown, setFormShown] = useState(true);
@@ -35,14 +37,24 @@ const CreateRoom: NextPage = () => {
   const [privateKey, setPrivateKey] = useState("");
   const [roomData, setRoomData] = useState<RoomData>();
   const [roomCreated, setRoomCreated] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
 
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
 
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
+  const router = useRouter();
+
   const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
     state.context;
+
+  if (
+    (state.matches("SettingsLoaded") || state.matches("Settings")) &&
+    (!token || !url)
+  ) {
+    router.push("/settings?back=/create-room");
+  }
 
   const completedProgress = useMemo(() => {
     if (!roomData) {
@@ -53,6 +65,23 @@ const CreateRoom: NextPage = () => {
 
     return Math.floor((100 / roomData.min_share_count) * submittedShares);
   }, [roomData]);
+
+  useEffect(() => {
+    if (!formShown && !roomCreated && !publicKey && !roomData) {
+      setLoading(true);
+    } else if (roomCreated && publicKey && roomData) {
+      setLoading(false);
+    }
+  }, [formShown, publicKey, roomCreated, roomData]);
+
+  useEffect(() => {
+    if (errorText || errorTextForMinShareCount || errorTextForRoomId) {
+      const tid = setTimeout(() => {
+        setLoading(false);
+        clearTimeout(tid);
+      }, 300);
+    }
+  }, [errorText, errorTextForMinShareCount, errorTextForRoomId]);
 
   useEffect(() => {
     send({
@@ -105,15 +134,16 @@ const CreateRoom: NextPage = () => {
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, user-scalable=no" />
-
         <title>
-          Create Room |{" "}
-          {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+          {`Create Room | ${
+            process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"
+          }`}
         </title>
       </Head>
 
       <Stack align="center" justify="center" style={{ height: "80%" }}>
+        <LoadingOverlay visible={loading} overlayBlur={1} />
+
         {formShown && (
           <form
             onSubmit={async (event) => {
@@ -209,6 +239,10 @@ const CreateRoom: NextPage = () => {
                 setRoomId(event.currentTarget.value);
               }}
               error={errorTextForRoomId}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
 
             <NumberInput
@@ -228,6 +262,10 @@ const CreateRoom: NextPage = () => {
                 }
               }}
               error={errorTextForMinShareCount}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
 
             <Button
@@ -255,6 +293,11 @@ const CreateRoom: NextPage = () => {
             required
             value={roomId}
             onFocus={(event) => event.currentTarget.select()}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
+            onChange={() => {}}
           />
         )}
 
@@ -267,6 +310,11 @@ const CreateRoom: NextPage = () => {
             value={publicKey}
             contentEditable={false}
             onFocus={(event) => event.currentTarget.select()}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
+            onChange={() => {}}
           />
         )}
 

@@ -91,8 +91,6 @@ export const createRoom = async ({
     },
   };
 
-  console.log(requestBody);
-
   const body = JSON.stringify(requestBody);
 
   const requestOptions = {
@@ -103,6 +101,75 @@ export const createRoom = async ({
 
   const response = await fetch(
     `${url}${routes.SET_MIN_SHARE_COUNT}`,
+    requestOptions,
+  );
+
+  try {
+    const data = (await response.json()) as Partial<ErrorResponse>;
+
+    if (!data.success && data.message && setErrorText) {
+      setErrorText(data.message);
+      return;
+    }
+
+    return data;
+  } catch (error) {
+    console.error(error);
+    return {
+      success: false,
+      message:
+        response.status === 403
+          ? "Forbidden. API Access Token may be invalid."
+          : "",
+    } as ErrorResponse;
+  }
+};
+
+export const addEncryptedShare = async ({
+  roomId,
+  encryptedShareText,
+  publicKey,
+  token,
+  url,
+  setErrorText,
+}: {
+  roomId: string;
+  encryptedShareText: string;
+  publicKey: string;
+  token: string;
+  url: string;
+  setErrorText?: (errorText: string) => void;
+}) => {
+  const headers = new Headers();
+
+  headers.append("API_ACCESS_TOKEN", token.trim());
+  headers.append("Content-Type", "application/json");
+
+  headers.append(
+    "Access-Control-Request-Headers",
+    Array.from(headers.keys()).join(","),
+  );
+
+  const requestBody = {
+    room: {
+      uuid: roomId,
+    },
+    encrypted_share: {
+      encrypted_share_text: encryptedShareText,
+      public_key: publicKey,
+    },
+  };
+
+  const body = JSON.stringify(requestBody);
+
+  const requestOptions = {
+    method: "POST",
+    headers,
+    body,
+  };
+
+  const response = await fetch(
+    `${url}${routes.ADD_ENCRYPTED_SHARE}`,
     requestOptions,
   );
 

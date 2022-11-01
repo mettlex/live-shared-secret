@@ -11,9 +11,9 @@ import { ErrorResponse, RoomData } from "../types";
 const Home: NextPage = () => {
   const [roomId, setRoomId] = useState("");
   const [errorText, setErrorText] = useState("");
-  const router = useRouter();
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
+  const router = useRouter();
 
   const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
     state.context;
@@ -30,8 +30,6 @@ const Home: NextPage = () => {
   ) {
     router.push("/settings");
   }
-
-  console.log(state.value);
 
   return (
     <>
@@ -91,6 +89,10 @@ const Home: NextPage = () => {
               setRoomId(event.currentTarget.value);
             }}
             error={errorText}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
           />
 
           <Button

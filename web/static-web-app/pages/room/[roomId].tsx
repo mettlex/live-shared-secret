@@ -1,28 +1,50 @@
 import {
   Button,
-  TextInput,
   Stack,
   Textarea,
   Modal,
   RingProgress,
   Text,
   Group,
+  PasswordInput,
 } from "@mantine/core";
+import { IconLock, IconLockOpen } from "@tabler/icons";
 import { useActor } from "@xstate/react";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { GlobalStateContext } from "../../store/global";
 import { RoomData } from "../../types";
-import { getRoomData } from "../../utils/api";
+import { addEncryptedShare, getRoomData } from "../../utils/api";
+import {
+  aesGcmDecryptToUint8,
+  deriveKey,
+  encryptTextUsingECDHAES,
+  generateKeyPair,
+} from "../../utils/cryptography";
+import {
+  decode as decodeBase64,
+  encode as encodeBase64,
+} from "../../utils/encoding/base64";
 
 const Room: NextPage = () => {
   const { appService } = useContext(GlobalStateContext);
   const [state, send] = useActor(appService);
   const [formShown, setFormShown] = useState(true);
+  const [decrypted, setDecrypted] = useState(false);
   const [publicKey, setPublicKey] = useState("");
+  const [ownPublicKey, setOwnPublicKey] = useState("");
   const [encryptedShare, setEncryptedShare] = useState("");
+  const [encryptedShareUsingPublicKey, setEncryptedShareUsingPublicKey] =
+    useState("");
   const [password, setPassword] = useState("");
   const [errorText, setErrorText] = useState("");
   const [roomData, setRoomData] = useState<RoomData>();
@@ -32,6 +54,41 @@ const Room: NextPage = () => {
   const { roomId } = router.query;
   const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
     state.context;
+
+  const attemptToDecrypt = useCallback(async () => {
+    console.log({ password });
+
+    try {
+      const decryptedShare = await aesGcmDecryptToUint8({
+        ciphertext: encryptedShare,
+        password,
+      });
+
+      setDecrypted(true);
+
+      if (publicKey) {
+        const publicKeyJwk = JSON.parse(
+          new TextDecoder().decode(decodeBase64(publicKey)),
+        ) as JsonWebKey;
+
+        const { privateKeyJwk, publicKeyJwk: ownPbKey } =
+          await generateKeyPair();
+
+        const encryptedUsingPbKey = await encryptTextUsingECDHAES({
+          text: new TextDecoder().decode(decryptedShare),
+          derivedKey: await deriveKey({ publicKeyJwk, privateKeyJwk }),
+        });
+
+        console.log(JSON.stringify(encryptedUsingPbKey, null, 2));
+
+        setEncryptedShareUsingPublicKey(JSON.stringify(encryptedUsingPbKey));
+        setOwnPublicKey(encodeBase64(JSON.stringify(ownPbKey)));
+      }
+    } catch (error) {
+      // console.error(error);
+      setDecrypted(false);
+    }
+  }, [encryptedShare, password, publicKey]);
 
   const completedProgress = useMemo(() => {
     if (!roomData) {
@@ -49,6 +106,12 @@ const Room: NextPage = () => {
       setFormShown(false);
     }
   }, [completedProgress]);
+
+  useEffect(() => {
+    if (password) {
+      attemptToDecrypt();
+    }
+  }, [attemptToDecrypt, encryptedShare, password]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof roomId !== "string") {
@@ -89,47 +152,83 @@ const Room: NextPage = () => {
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, user-scalable=no" />
-
         <title>
-          Room | {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+          {`Room | ${
+            process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"
+          }`}
         </title>
       </Head>
 
       <Stack align="center">
         {formShown && (
           <form
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
+
+              if (
+                ownPublicKey &&
+                encryptedShareUsingPublicKey &&
+                decrypted &&
+                typeof roomId === "string"
+              ) {
+                const response = await addEncryptedShare({
+                  url,
+                  token,
+                  roomId,
+                  setErrorText,
+                  encryptedShareText: encryptedShareUsingPublicKey,
+                  publicKey: ownPublicKey,
+                });
+
+                if (response?.success) {
+                  setFormShown(false);
+                }
+              }
             }}
           >
             <Textarea
-              minRows={7}
+              minRows={4}
               style={{ width: "80vw", maxWidth: "400px" }}
+              styles={{ input: { maxHeight: "18vh", height: "200px" } }}
               placeholder="Enter the room creator's public key here"
               label="Public Key"
               required
               value={publicKey}
-              onChange={(event) => setPublicKey(event.currentTarget.value)}
+              onChange={(event) =>
+                setPublicKey(event.currentTarget.value.trim())
+              }
             />
 
             <Textarea
+              minRows={4}
               style={{ width: "80vw", maxWidth: "400px" }}
+              styles={{ input: { maxHeight: "18vh", height: "200px" } }}
               placeholder="Enter your encrypted share here"
               label="Your Share"
               required
               value={encryptedShare}
-              onChange={(event) => setEncryptedShare(event.currentTarget.value)}
+              onChange={(event) =>
+                setEncryptedShare(event.currentTarget.value.trim())
+              }
             />
 
-            <TextInput
+            <PasswordInput
+              icon={
+                decrypted ? (
+                  <IconLockOpen size={16} color="green" />
+                ) : (
+                  <IconLock size={16} color="red" />
+                )
+              }
               style={{ width: "80vw", maxWidth: "400px" }}
               mb="xl"
               placeholder="Enter your password to decrypt your share"
               label="Your Password"
               required
               value={password}
-              onChange={(event) => setPassword(event.currentTarget.value)}
+              onChange={(event) => {
+                setPassword(event.currentTarget.value.trim());
+              }}
             />
 
             <Button
@@ -138,6 +237,7 @@ const Room: NextPage = () => {
               variant="gradient"
               gradient={{ from: "darkblue", to: "purple" }}
               size="md"
+              disabled={!decrypted}
             >
               Send Share
             </Button>
@@ -186,15 +286,16 @@ const Room: NextPage = () => {
         )}
       </Stack>
 
-      <Modal
+      {/* <Modal
         opened={!!errorText}
         onClose={() => {
           router.push("/");
         }}
         title="Error!"
+        centered={true}
       >
         {errorText}
-      </Modal>
+      </Modal> */}
     </>
   );
 };

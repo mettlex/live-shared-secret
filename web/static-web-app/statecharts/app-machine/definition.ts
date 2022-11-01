@@ -30,6 +30,10 @@ const appMachine = createMachine({
     ROOM_REQUESTED: {
       target: "Room",
     },
+    SETTINGS_REQUESTED: {
+      actions: ["loadSettingsFromStorage"],
+      target: "SettingsLoaded",
+    },
   },
   tsTypes: {} as import("./definition.typegen").Typegen0,
   schema: {
@@ -41,10 +45,6 @@ const appMachine = createMachine({
       on: {
         SETTINGS_PAGE_REQUESTED: {
           target: "Settings",
-        },
-        SETTINGS_REQUESTED: {
-          actions: ["loadSettingsFromStorage"],
-          target: "SettingsLoaded",
         },
       },
     },

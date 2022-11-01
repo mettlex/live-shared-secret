@@ -97,6 +97,10 @@ const Settings: NextPage = () => {
 
       <Stack align="center" justify="center" style={{ height: "80%" }}>
         <PasswordInput
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck="false"
           label="Serverless API Token"
           placeholder="Paste the API access token here"
           icon={<IconLock size={14} />}
@@ -108,6 +112,10 @@ const Settings: NextPage = () => {
         />
 
         <Select
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck="false"
           label="Base URL of Serverless Function"
           placeholder="Pick one"
           data={data}
@@ -129,6 +137,10 @@ const Settings: NextPage = () => {
 
         {isCustom && (
           <TextInput
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
             type="url"
             label="Custom Base URL"
             placeholder="Type the URL with https:// prefix here"
@@ -177,13 +189,18 @@ const Settings: NextPage = () => {
 
         {saved && (
           <Button
-            style={{ width: "100%", maxWidth: "400px" }}
+            style={{ width: "80vw", maxWidth: "400px" }}
             variant="gradient"
             gradient={{ from: "blue", to: "purple" }}
             onClick={() => {
               send({
-                type: "GO_HOME",
+                type: "SETTINGS_REQUESTED",
               });
+
+              if (typeof router.query?.back === "string") {
+                router.back();
+                return;
+              }
 
               router.push("/");
             }}
