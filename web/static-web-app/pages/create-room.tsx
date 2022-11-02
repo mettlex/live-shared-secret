@@ -123,7 +123,7 @@ const CreateRoom: NextPage = () => {
         }
 
         if (secret) {
-          setSecretText(secret);
+          setSecretText(secret.replace("[", ""));
         }
       } catch (error) {
         console.error(error);

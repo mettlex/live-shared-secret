@@ -136,6 +136,10 @@ const Home: NextPage = () => {
                       data: event.currentTarget.value.trim(),
                     })
                   }
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                 />
               </Accordion.Panel>
             </Accordion.Item>

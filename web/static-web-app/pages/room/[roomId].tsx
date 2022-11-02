@@ -208,6 +208,10 @@ const Room: NextPage = () => {
               onChange={(event) =>
                 setPublicKey(event.currentTarget.value.trim())
               }
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
 
             <Accordion
@@ -217,6 +221,7 @@ const Room: NextPage = () => {
                 },
               }}
               variant="filled"
+              mt="xs"
             >
               <Accordion.Item value="share">
                 <Accordion.Control
@@ -241,6 +246,10 @@ const Room: NextPage = () => {
                     onChange={(event) =>
                       setEncryptedShare(event.currentTarget.value.trim())
                     }
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
                 </Accordion.Panel>
               </Accordion.Item>

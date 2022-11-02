@@ -3,6 +3,7 @@ import { Navbar, NavLink, Stack } from "@mantine/core";
 import { GlobalStateContext } from "../../store/global";
 import { useActor } from "@xstate/react";
 import {
+  IconChartPie,
   IconCircle,
   IconCirclePlus,
   IconHome2,
@@ -58,6 +59,17 @@ const AppNavbar = () => {
             label="Create Room"
             icon={<IconCirclePlus size={16} stroke={1.5} />}
             active={pathname === "/create-room"}
+            onClick={() => {
+              send("CLOSED_NAV");
+            }}
+          />
+        </Link>
+
+        <Link href="/create-shares" passHref>
+          <NavLink
+            label="Create Shares"
+            icon={<IconChartPie size={16} stroke={1.5} />}
+            active={pathname === "/create-shares"}
             onClick={() => {
               send("CLOSED_NAV");
             }}
