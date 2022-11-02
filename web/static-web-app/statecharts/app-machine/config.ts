@@ -8,6 +8,7 @@ import {
   loadSettingsFromStorage,
   storeServerlessApiAccessToken,
   storeServerlessApiBaseUrl,
+  storeEncryptedShare,
 } from "./actions";
 import {} from "./services";
 
@@ -23,6 +24,7 @@ export default machineDef.withConfig({
     loadSettingsFromStorage,
     storeServerlessApiAccessToken,
     storeServerlessApiBaseUrl,
+    storeEncryptedShare,
   },
   services: {},
 });

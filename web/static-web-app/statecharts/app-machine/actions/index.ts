@@ -40,6 +40,16 @@ export const loadSettingsFromStorage: Action = assign(() => {
   return {};
 });
 
+export const storeEncryptedShare: Action = assign((_context, event) => {
+  if (event.type === "ENCRYPTED_SHARE_CHANGED") {
+    return {
+      encryptedShare: event.data,
+    };
+  } else {
+    return {};
+  }
+});
+
 export const storeServerlessApiAccessToken: Action = (_context, event) => {
   if (
     event.type === "SERVERLESS_API_ACCESS_TOKEN_CHANGED" &&

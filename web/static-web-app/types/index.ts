@@ -22,6 +22,7 @@ export type AppSettings = {
 export type AppContext = {
   colorScheme: "dark" | "light";
   isNavOpen: boolean;
+  encryptedShare: string;
 } & AppSettings;
 
 export type AppEvent =
@@ -44,6 +45,10 @@ export type AppEvent =
     }
   | {
       type: "SERVERLESS_API_BASE_URL_CHANGED";
+      data: string;
+    }
+  | {
+      type: "ENCRYPTED_SHARE_CHANGED";
       data: string;
     }
   | {

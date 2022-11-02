@@ -1,4 +1,4 @@
-import { Button, TextInput, Stack } from "@mantine/core";
+import { Button, TextInput, Stack, Accordion, Textarea } from "@mantine/core";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -7,6 +7,7 @@ import { useActor } from "@xstate/react";
 import { GlobalStateContext } from "../store/global";
 import { getRoomData } from "../utils/api";
 import { ErrorResponse, RoomData } from "../types";
+import { IconChartPie, IconPlus } from "@tabler/icons";
 
 const Home: NextPage = () => {
   const [roomId, setRoomId] = useState("");
@@ -94,6 +95,51 @@ const Home: NextPage = () => {
             autoCorrect="off"
             spellCheck="false"
           />
+
+          <Accordion
+            chevron={<IconPlus size={16} />}
+            styles={{
+              chevron: {
+                "&[data-rotate]": {
+                  transform: "rotate(45deg)",
+                },
+              },
+              control: {
+                maxWidth: "80vw",
+              },
+            }}
+            variant="separated"
+            mb="xl"
+          >
+            <Accordion.Item value="share">
+              <Accordion.Control
+                icon={<IconChartPie size={20} color="lightblue" />}
+              >
+                Add Encrypted Share
+              </Accordion.Control>
+
+              <Accordion.Panel>
+                <Textarea
+                  minRows={4}
+                  styles={{
+                    input: {
+                      maxHeight: "18vh",
+                      height: "200px",
+                    },
+                  }}
+                  placeholder="Enter your encrypted share here"
+                  label=""
+                  required={false}
+                  onChange={(event) =>
+                    send({
+                      type: "ENCRYPTED_SHARE_CHANGED",
+                      data: event.currentTarget.value.trim(),
+                    })
+                  }
+                />
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
 
           <Button
             type="submit"

@@ -34,6 +34,9 @@ const appMachine = createMachine({
       actions: ["loadSettingsFromStorage"],
       target: "SettingsLoaded",
     },
+    ENCRYPTED_SHARE_CHANGED: {
+      actions: ["storeEncryptedShare"],
+    },
   },
   tsTypes: {} as import("./definition.typegen").Typegen0,
   schema: {

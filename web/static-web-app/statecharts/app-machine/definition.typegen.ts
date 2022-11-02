@@ -15,6 +15,7 @@ export interface Typegen0 {
       | "loadSettingsFromStorage"
       | "storeServerlessApiAccessToken"
       | "storeServerlessApiBaseUrl"
+      | "storeEncryptedShare"
       | "restoreColorScheme";
     services: never;
     guards: never;
@@ -35,6 +36,7 @@ export interface Typegen0 {
     setNavClosed: "CLOSED_NAV";
     setNavOpen: "OPENED_NAV";
     storeColorScheme: "COLOR_SCHEME_CHANGED";
+    storeEncryptedShare: "ENCRYPTED_SHARE_CHANGED";
     storeServerlessApiAccessToken: "SERVERLESS_API_ACCESS_TOKEN_CHANGED";
     storeServerlessApiBaseUrl: "SERVERLESS_API_BASE_URL_CHANGED";
   };

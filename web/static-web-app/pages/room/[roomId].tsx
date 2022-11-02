@@ -7,8 +7,9 @@ import {
   Text,
   Group,
   PasswordInput,
+  Accordion,
 } from "@mantine/core";
-import { IconLock, IconLockOpen } from "@tabler/icons";
+import { IconChartPie, IconLock, IconLockOpen, IconPlus } from "@tabler/icons";
 import { useActor } from "@xstate/react";
 import type { NextPage } from "next";
 import Head from "next/head";
@@ -52,8 +53,11 @@ const Room: NextPage = () => {
   const router = useRouter();
 
   const { roomId } = router.query;
-  const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
-    state.context;
+  const {
+    serverlessApiAccessToken: token,
+    serverlessApiBaseUrl: url,
+    encryptedShare: encryptedShareInContext,
+  } = state.context;
 
   const attemptToDecrypt = useCallback(async () => {
     try {
@@ -95,6 +99,12 @@ const Room: NextPage = () => {
 
     return Math.floor((100 / roomData.min_share_count) * submittedShares);
   }, [roomData]);
+
+  useEffect(() => {
+    if (encryptedShareInContext) {
+      setEncryptedShare(encryptedShareInContext);
+    }
+  }, [encryptedShareInContext]);
 
   useEffect(() => {
     if (
@@ -200,18 +210,41 @@ const Room: NextPage = () => {
               }
             />
 
-            <Textarea
-              minRows={4}
-              style={{ width: "80vw", maxWidth: "400px" }}
-              styles={{ input: { maxHeight: "18vh", height: "200px" } }}
-              placeholder="Enter your encrypted share here"
-              label="Your Share"
-              required
-              value={encryptedShare}
-              onChange={(event) =>
-                setEncryptedShare(event.currentTarget.value.trim())
-              }
-            />
+            <Accordion
+              styles={{
+                control: {
+                  maxWidth: "80vw",
+                },
+              }}
+              variant="filled"
+            >
+              <Accordion.Item value="share">
+                <Accordion.Control
+                  icon={<IconChartPie size={20} color="lightblue" />}
+                >
+                  Your Encrypted Share
+                </Accordion.Control>
+
+                <Accordion.Panel>
+                  <Textarea
+                    minRows={4}
+                    styles={{
+                      input: {
+                        maxHeight: "18vh",
+                        height: "200px",
+                      },
+                    }}
+                    placeholder="Enter your encrypted share here"
+                    label=""
+                    required
+                    value={encryptedShare}
+                    onChange={(event) =>
+                      setEncryptedShare(event.currentTarget.value.trim())
+                    }
+                  />
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
 
             <PasswordInput
               icon={
