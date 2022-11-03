@@ -8,9 +8,11 @@ import {
   NumberInput,
   RingProgress,
   Stack,
+  Switch,
   Text,
   Textarea,
   TextInput,
+  useMantineTheme,
 } from "@mantine/core";
 import {
   useState,
@@ -37,8 +39,11 @@ import {
 } from "../utils/cryptography";
 import { combineShares } from "../utils/sss-wasm/index";
 import { RoomData } from "../types";
+import { IconCheck, IconX } from "@tabler/icons";
 
 const CreateRoom: NextPage = () => {
+  const theme = useMantineTheme();
+  const [agreedToSendPbKey, setAgreedToSendPbKey] = useState(true);
   const [formShown, setFormShown] = useState(true);
   const [roomId, setRoomId] = useState("");
   const [minShareCount, setMinShareCount] = useState<number>(2);
@@ -282,10 +287,15 @@ const CreateRoom: NextPage = () => {
                 return;
               }
 
+              const pbKeyText = encodeBase64(
+                JSON.stringify(keypair.publicKeyJwk),
+              );
+
               try {
                 const data = await createRoom({
                   roomId,
                   minShareCount,
+                  publicKey: agreedToSendPbKey ? pbKeyText : undefined,
                   token,
                   url,
                   setErrorText,
@@ -300,9 +310,7 @@ const CreateRoom: NextPage = () => {
                 } else {
                   setFormShown(false);
 
-                  setPublicKey(
-                    encodeBase64(JSON.stringify(keypair.publicKeyJwk)),
-                  );
+                  setPublicKey(pbKeyText);
 
                   setPrivateKeyJwk(keypair.privateKeyJwk);
 
@@ -366,6 +374,33 @@ const CreateRoom: NextPage = () => {
               autoCorrect="off"
               spellCheck="false"
             />
+
+            <Group position="left" mb="xl">
+              <Switch
+                checked={agreedToSendPbKey}
+                onChange={(event) =>
+                  setAgreedToSendPbKey(event.currentTarget.checked)
+                }
+                color="violet"
+                size="xs"
+                label="Send my public key to the serverless function"
+                thumbIcon={
+                  agreedToSendPbKey ? (
+                    <IconCheck
+                      size={12}
+                      color={theme.colors.violet[theme.fn.primaryShade()]}
+                      stroke={3}
+                    />
+                  ) : (
+                    <IconX
+                      size={12}
+                      color={theme.colors.red[theme.fn.primaryShade()]}
+                      stroke={3}
+                    />
+                  )
+                }
+              />
+            </Group>
 
             <Button
               type="submit"
@@ -476,7 +511,11 @@ const CreateRoom: NextPage = () => {
                     sections={[
                       {
                         value: Math.floor(
-                          (100 * (roomData.expires_in_seconds || 0)) / 60,
+                          (100 * (roomData.expires_in_seconds || 0)) /
+                            parseInt(
+                              process.env.NEXT_PUBLIC_DATA_EXPIRE_SECONDS ||
+                                "120",
+                            ),
                         ),
                         color: "blue",
                       },
@@ -494,6 +533,17 @@ const CreateRoom: NextPage = () => {
               )}
           </Group>
         )}
+
+        <Modal
+          opened={!!errorText}
+          onClose={() => {
+            router.reload();
+          }}
+          title="Error!"
+          centered={true}
+        >
+          {errorText}
+        </Modal>
       </Stack>
     </>
   );

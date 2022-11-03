@@ -10,6 +10,7 @@ export type PublicShare = {
 
 export type RoomData = {
   min_share_count: number;
+  public_key?: string;
   expires_in_seconds: number;
   encrypted_shares?: PublicShare[];
 };

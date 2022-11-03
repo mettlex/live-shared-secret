@@ -6,10 +6,11 @@ export type EncryptedShare = {
 export type Room = {
   uuid: string;
   min_share_count: number;
+  public_key?: string;
   encrypted_shares: EncryptedShare[];
 };
 
-export type SetMinShareCountRequestBody = {
+export type CreateRoomRequestBody = {
   room: Partial<Room>;
 };
 

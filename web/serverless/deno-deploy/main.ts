@@ -9,7 +9,7 @@ import { routes } from "./routes.ts";
 import {
   AddEncryptedShareRequestBody,
   Room,
-  SetMinShareCountRequestBody,
+  CreateRoomRequestBody,
 } from "./types.ts";
 import cors from "./cors.ts";
 
@@ -181,10 +181,10 @@ router.post(routes.ADD_ENCRYPTED_SHARE, async (ctx) => {
   }
 });
 
-router.post(routes.SET_MIN_SHARE_COUNT, async (ctx) => {
+router.post(routes.CREATE_ROOM, async (ctx) => {
   try {
     const body = (await ctx.request.body({ type: "json" }).value) as
-      | Partial<SetMinShareCountRequestBody>
+      | Partial<CreateRoomRequestBody>
       | undefined;
 
     if (
@@ -203,6 +203,23 @@ router.post(routes.SET_MIN_SHARE_COUNT, async (ctx) => {
 
     const roomUuid = body.room.uuid;
     const minShareCount = body.room.min_share_count;
+    const publicKey = body.room.public_key;
+
+    const result0 = await execRedisCommand({
+      command: "JSON.GET",
+      args: [roomUuid],
+    });
+
+    if (typeof result0 === "string") {
+      ctx.response.status = Status.BadRequest;
+
+      ctx.response.body = {
+        success: false,
+        message: "The room already exists.",
+      };
+
+      return;
+    }
 
     const result1 = await execRedisCommand({
       command: "JSON.SET",
@@ -211,6 +228,7 @@ router.post(routes.SET_MIN_SHARE_COUNT, async (ctx) => {
         "$",
         JSON.stringify({
           min_share_count: minShareCount,
+          public_key: publicKey,
         }),
       ],
     });
@@ -246,7 +264,7 @@ router.post(routes.SET_MIN_SHARE_COUNT, async (ctx) => {
 
     ctx.response.body = {
       success: true,
-      message: "Minimum share count has been set successfully",
+      message: "The room has been created successfully",
     };
   } catch (_error) {
     // console.error(error);

@@ -64,12 +64,14 @@ export const getRoomData = async ({
 export const createRoom = async ({
   roomId,
   minShareCount,
+  publicKey,
   token,
   url,
   setErrorText,
 }: {
   roomId: string;
   minShareCount: number;
+  publicKey?: string;
   token: string;
   url: string;
   setErrorText?: (errorText: string) => void;
@@ -88,6 +90,7 @@ export const createRoom = async ({
     room: {
       uuid: roomId,
       min_share_count: minShareCount,
+      public_key: publicKey,
     },
   };
 
@@ -99,10 +102,7 @@ export const createRoom = async ({
     body,
   };
 
-  const response = await fetch(
-    `${url}${routes.SET_MIN_SHARE_COUNT}`,
-    requestOptions,
-  );
+  const response = await fetch(`${url}${routes.CREATE_ROOM}`, requestOptions);
 
   try {
     const data = (await response.json()) as Partial<ErrorResponse>;

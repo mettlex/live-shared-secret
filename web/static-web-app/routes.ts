@@ -1,6 +1,6 @@
 const routes = {
   GET_ROOM: "/room/get",
-  SET_MIN_SHARE_COUNT: "/room/set-min-share-count",
+  CREATE_ROOM: "/room/create",
   ADD_ENCRYPTED_SHARE: "/room/add-encrypted-share",
 };
 

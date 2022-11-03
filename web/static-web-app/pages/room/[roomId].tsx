@@ -9,7 +9,13 @@ import {
   PasswordInput,
   Accordion,
 } from "@mantine/core";
-import { IconChartPie, IconLock, IconLockOpen, IconPlus } from "@tabler/icons";
+import {
+  IconChartPie,
+  IconLock,
+  IconLockOpen,
+  IconPlus,
+  IconShieldLock,
+} from "@tabler/icons";
 import { useActor } from "@xstate/react";
 import type { NextPage } from "next";
 import Head from "next/head";
@@ -107,6 +113,12 @@ const Room: NextPage = () => {
   }, [encryptedShareInContext]);
 
   useEffect(() => {
+    if (roomData?.public_key) {
+      setPublicKey(roomData.public_key);
+    }
+  }, [roomData?.public_key]);
+
+  useEffect(() => {
     if (
       completedProgress === 100 ||
       (roomData &&
@@ -197,27 +209,55 @@ const Room: NextPage = () => {
               }
             }}
           >
-            <Textarea
-              minRows={4}
-              style={{ width: "80vw", maxWidth: "400px" }}
-              styles={{ input: { maxHeight: "18vh", height: "200px" } }}
-              placeholder="Enter the room creator's public key here"
-              label="Public Key"
-              required
-              value={publicKey}
-              onChange={(event) =>
-                setPublicKey(event.currentTarget.value.trim())
-              }
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck="false"
-            />
+            <Accordion
+              styles={{
+                control: {
+                  maxWidth: "80vw",
+                  paddingLeft: "5px",
+                  paddingRight: "5px",
+                },
+              }}
+              variant="filled"
+              mt="xs"
+            >
+              <Accordion.Item value="share">
+                <Accordion.Control
+                  icon={<IconShieldLock size={20} color="lightblue" />}
+                >
+                  Public Key
+                </Accordion.Control>
+
+                <Accordion.Panel>
+                  <Textarea
+                    minRows={4}
+                    styles={{
+                      input: {
+                        maxHeight: "18vh",
+                        height: "200px",
+                      },
+                    }}
+                    placeholder="Enter the room creator's public key here"
+                    label=""
+                    required
+                    value={publicKey}
+                    onChange={(event) =>
+                      setPublicKey(event.currentTarget.value.trim())
+                    }
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
 
             <Accordion
               styles={{
                 control: {
                   maxWidth: "80vw",
+                  paddingLeft: "5px",
+                  paddingRight: "5px",
                 },
               }}
               variant="filled"
@@ -309,7 +349,11 @@ const Room: NextPage = () => {
                   sections={[
                     {
                       value: Math.floor(
-                        (100 * (roomData.expires_in_seconds || 0)) / 60,
+                        (100 * (roomData.expires_in_seconds || 0)) /
+                          parseInt(
+                            process.env.NEXT_PUBLIC_DATA_EXPIRE_SECONDS ||
+                              "120",
+                          ),
                       ),
                       color: "blue",
                     },
