@@ -21,6 +21,8 @@ const AppFooter = () => {
           </Text>
         </Stack>
       </Group>
+
+      <div style={{ height: "env(safe-area-inset-bottom, 0px)" }}></div>
     </Footer>
   );
 };
