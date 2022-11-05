@@ -9,21 +9,37 @@ async function main() {
   //#region Login
 
   const setPassword = (password) => {
-    const passwordEl = document.querySelector("input[type=password]");
+    let passwordEls = document.querySelectorAll("input[type=password]");
 
-    if (!passwordEl) {
-      const passwordEl2 = document.querySelector(
-        prompt(
-          "Enter selector for the password input field (document.querySelector)",
-        ),
-      );
+    if (passwordEls.length === 0) {
+      const elCount = prompt("How many password fields are here in this page?");
 
-      if (!passwordEl2) {
+      if (!elCount || isNaN(parseInt(elCount))) {
         return;
       }
+
+      passwordEls = new Array(parseInt(elCount)).fill(
+        document.querySelector("[type=password]"),
+      );
     }
 
-    passwordEl.value = password;
+    for (const passwordEl of passwordEls) {
+      if (!passwordEl) {
+        const passwordEl2 = document.querySelector(
+          prompt(
+            "Enter selector for the password input field (document.querySelector)",
+          ),
+        );
+
+        if (!passwordEl2) {
+          return;
+        } else {
+          passwordEl2.value = password;
+        }
+      } else {
+        passwordEl.value = password;
+      }
+    }
 
     alert(
       "Done! Now type one letter in the password field and remove it using backspace.",
