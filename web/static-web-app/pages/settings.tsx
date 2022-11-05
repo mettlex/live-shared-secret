@@ -85,8 +85,6 @@ const Settings: NextPage = () => {
     }
   }, [data]);
 
-  console.log(state.value);
-
   return (
     <>
       <Head>

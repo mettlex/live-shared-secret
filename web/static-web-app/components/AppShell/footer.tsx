@@ -6,7 +6,7 @@ const AppFooter = () => {
   const bigScreen = useMediaQuery("(min-width: 768px)");
 
   return (
-    <Footer height="auto" p={0}>
+    <Footer height="auto" p={0} pt={2}>
       <Group position={bigScreen ? "right" : "center"} mr="lg" ml="lg">
         <Stack align="center" spacing={0}>
           <ActionIcon

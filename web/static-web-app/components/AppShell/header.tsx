@@ -23,7 +23,7 @@ const AppHeader = () => {
   const { isNavOpen } = context;
 
   return (
-    <Header height={60} p="md">
+    <Header height={60} p="md" fixed>
       <Group position="left" spacing="xs">
         <MediaQuery largerThan="sm" styles={{ display: "none" }}>
           <Burger

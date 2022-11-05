@@ -1,3 +1,10 @@
+export enum PageLinks {
+  Settings = "/settings",
+  EnterRoom = "/enter-room",
+  CreateRoom = "/create-room",
+  CreateShares = "create-shares",
+}
+
 export type ErrorResponse = {
   success: boolean;
   message: string;

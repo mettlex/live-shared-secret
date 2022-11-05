@@ -4,9 +4,9 @@ import { GlobalStateContext } from "../../store/global";
 import { useActor } from "@xstate/react";
 import {
   IconChartPie,
-  IconCircle,
-  IconCirclePlus,
+  IconDoorEnter,
   IconHome2,
+  IconHomeHeart,
   IconSettings,
 } from "@tabler/icons";
 import { useRouter } from "next/router";
@@ -57,8 +57,19 @@ const AppNavbar = () => {
         <Link href="/create-room" passHref>
           <NavLink
             label="Create Room"
-            icon={<IconCirclePlus size={16} stroke={1.5} />}
+            icon={<IconHomeHeart size={16} stroke={1.5} />}
             active={pathname === "/create-room"}
+            onClick={() => {
+              send("CLOSED_NAV");
+            }}
+          />
+        </Link>
+
+        <Link href="/enter-room" passHref>
+          <NavLink
+            label="Enter Room"
+            icon={<IconDoorEnter size={16} stroke={1.5} />}
+            active={pathname === "/enter-room"}
             onClick={() => {
               send("CLOSED_NAV");
             }}
