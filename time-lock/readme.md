@@ -13,7 +13,7 @@
 
 #### Plan Summary:
 
-There will be `N` number of active key-service providers discovered by a user in a given time such that `2 < K < (N/2) < M < N` where `K` is the number of key-service providers that will be chosen randomly in the time-lock encryption process and `m` is the number of the providers that will approve the selection of `K` providers.
+There will be `N` number of active key-service providers discovered by a user in a given time such that `2 < K < (N/2) < M < N` where `K` is the number of key-service providers that will be chosen randomly in the time-lock encryption process and `M` is the number of the providers that will approve the selection of `K` providers.
 
 The user will set the number of total shares as `t`<sub>`s`</sub> such that `t`<sub>`s`</sub>` = K` and the minimum shares as `m`<sub>`s`</sub> to encrypt their secret using Shamir's Secret Sharing Scheme.
 
