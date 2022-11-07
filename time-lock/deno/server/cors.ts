@@ -9,7 +9,9 @@ const cors = (ctx: Context) => {
     "Authorization, Origin, X-Requested-With, Content-Type, Accept, DNT, Keep-Alive, User-Agent, If-Modified-Since, Cache-Control, Host, Accept-Language, Accept-Encoding, Referer, Authorization, Origin, Content-Length, Connection, Cookie, TE, API_ACCESS_TOKEN",
   );
 
-  ctx.response.status = Status.OK;
+  if (ctx.request.method === "OPTIONS") {
+    ctx.response.status = Status.OK;
+  }
 };
 
 export default cors;

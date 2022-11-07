@@ -1,3 +1,3 @@
 export const routes = {
-  GET_TIME: "/time/get",
+  GET_TIME: "/time/current",
 };

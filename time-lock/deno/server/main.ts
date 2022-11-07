@@ -4,6 +4,7 @@ import {
   Router,
   Status,
 } from "https://deno.land/x/oak@v11.1.0/mod.ts";
+import { RateLimiter } from "https://deno.land/x/oak_rate_limit@v0.1.1/mod.ts";
 import { routes } from "./routes.ts";
 import cors from "./cors.ts";
 import { getTimestamp } from "../lib/decentralized-time/mod.ts";
@@ -39,6 +40,15 @@ app.use(async (ctx, next) => {
   }
 });
 
+const rateLimit = RateLimiter({
+  windowMs: parseInt(Deno.env.get("API_RATE_LIMIT_WINDOW") || "60000"),
+  max: parseInt(Deno.env.get("API_RATE_LIMIT_MAX") || "300"),
+  headers: true,
+  message: "Too many requests, please try again later.",
+  statusCode: 429,
+});
+
+app.use(await rateLimit);
 app.use(router.routes());
 app.use(router.allowedMethods());
 

@@ -1,3 +1,19 @@
+const solanaUrls = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-api.projectserum.com",
+];
+
+const ethereumUrls = ["https://cloudflare-eth.com"];
+
+const ethereumLikeUrls = [
+  "https://polygon-rpc.com",
+  "https://bsc-dataseed.binance.org",
+  "https://rpc.xdaichain.com",
+  "https://api.avax.network/ext/bc/C/rpc",
+  "https://rpc.ftm.tools",
+  "https://rpc-mainnet.kcc.network",
+];
+
 export const getTimestamp = async () => {
   const solanaPromises: Promise<number | null>[] = [];
   const ethereumPromises: Promise<number | null>[] = [];
@@ -5,72 +21,54 @@ export const getTimestamp = async () => {
 
   solanaPromises.push(
     timeout(),
-    getCurrentTimestampFromSolana({
-      url: "https://api.mainnet-beta.solana.com",
-    }),
-    getCurrentTimestampFromSolana({
-      url: "https://solana-api.projectserum.com",
-    }),
+    ...solanaUrls.map((url) =>
+      getCurrentTimestampFromSolana({
+        url,
+      }).catch((_) => null),
+    ),
   );
 
   const solanaTimestampPromise = new Promise((resolve) => {
     solanaPromises.map((x) =>
-      x
-        .then((x) => {
-          resolve(x);
-        })
-        .catch((_) => null),
+      x.then((x) => {
+        resolve(x);
+      }),
     );
   }) as Promise<number | null>;
 
   ethereumPromises.push(
     Promise.race([
       timeout(),
-      getCurrentTimestampFromEthereum({
-        url: "https://cloudflare-eth.com",
-      }),
+      ...ethereumUrls.map((url) =>
+        getCurrentTimestampFromEthereum({
+          url,
+        }).catch((_) => null),
+      ),
     ]),
   );
 
   const ethereumTimestampPromise = new Promise((resolve) => {
     solanaPromises.map((x) =>
-      x
-        .then((x) => {
-          resolve(x);
-        })
-        .catch((_) => null),
+      x.then((x) => {
+        resolve(x);
+      }),
     );
   }) as Promise<number | null>;
 
   ethereumLikePromises.push(
     timeout(),
-    getCurrentTimestampFromEthereum({
-      url: "https://polygon-rpc.com",
-    }),
-    getCurrentTimestampFromEthereum({
-      url: "https://bsc-dataseed.binance.org",
-    }),
-    getCurrentTimestampFromEthereum({
-      url: "https://rpc.xdaichain.com",
-    }),
-    getCurrentTimestampFromEthereum({
-      url: "https://api.avax.network/ext/bc/C/rpc",
-    }),
-    getCurrentTimestampFromEthereum({
-      url: "https://rpc.ftm.tools",
-    }),
-    getCurrentTimestampFromEthereum({
-      url: "https://rpc-mainnet.kcc.network",
-    }),
+    ...ethereumLikeUrls.map((url) =>
+      getCurrentTimestampFromEthereum({
+        url,
+      }).catch((_) => null),
+    ),
   );
 
   const ethereumLikeTimestampPromise = new Promise((resolve) => {
     ethereumLikePromises.map((x) =>
-      x
-        .then((x) => {
-          resolve(x);
-        })
-        .catch((_) => null),
+      x.then((x) => {
+        resolve(x);
+      }),
     );
   }) as Promise<number | null>;
 
