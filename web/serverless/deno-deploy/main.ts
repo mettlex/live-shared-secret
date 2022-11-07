@@ -276,7 +276,7 @@ router.post(routes.CREATE_ROOM, async (ctx) => {
 
 const rateLimit = RateLimiter({
   windowMs: parseInt(Deno.env.get("API_RATE_LIMIT_WINDOW") || "60000"),
-  max: parseInt(Deno.env.get("API_RATE_LIMIT_MAX") || "150"),
+  max: parseInt(Deno.env.get("API_RATE_LIMIT_MAX") || "300"),
   headers: true,
   message: "Too many requests, please try again later.",
   statusCode: 429,
