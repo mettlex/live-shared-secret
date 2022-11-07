@@ -1,4 +1,5 @@
 import "https://deno.land/x/dotenv@v3.2.0/load.ts";
+import { RateLimiter } from "https://deno.land/x/oak_rate_limit@v0.1.1/mod.ts";
 import {
   Application,
   Router,
@@ -273,6 +274,14 @@ router.post(routes.CREATE_ROOM, async (ctx) => {
   }
 });
 
+const rateLimit = RateLimiter({
+  windowMs: parseInt(Deno.env.get("API_RATE_LIMIT_WINDOW") || "60000"),
+  max: parseInt(Deno.env.get("API_RATE_LIMIT_MAX") || "150"),
+  headers: true,
+  message: "Too many requests, please try again later.",
+  statusCode: 429,
+});
+
 const app = new Application();
 
 app.use(async (context, next) => {
@@ -298,6 +307,7 @@ app.use(async (ctx, next) => {
   }
 });
 
+app.use(await rateLimit);
 app.use(router.routes());
 app.use(router.allowedMethods());
 
