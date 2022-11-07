@@ -91,7 +91,9 @@ const Settings: NextPage = () => {
     <>
       <Head>
         <title>
-          Settings | {process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"}
+          {`Settings | ${
+            process.env.NEXT_PUBLIC_SITE_NAME || "Live Shared Secret"
+          }`}
         </title>
       </Head>
 
