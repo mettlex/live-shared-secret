@@ -11,6 +11,7 @@ import {
   Group,
   Select,
   Loader,
+  Modal,
 } from "@mantine/core";
 import {
   IconClockPause,
@@ -38,8 +39,6 @@ const CreateShares: NextPage = () => {
   const [usingTimeLock, setUsingTimeLock] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminPasswordOK, setAdminPasswordOK] = useState(false);
-  const [shareablePassword, setShareablePassword] = useState("");
-  const [shareablePasswordOK, setShareablePasswordOK] = useState(false);
   const [timeLockProvidersCount, setTimeLockProvidersCount] = useState(0);
   const [pubsubLoading, setPubSubLoading] = useState(true);
   const defaultTopic = `timelock-${Math.floor(Date.now() / 1000 / 3600)}`;
@@ -199,7 +198,6 @@ const CreateShares: NextPage = () => {
                   setTotalShares(value);
                 }
               }}
-              error={errorText}
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
@@ -220,7 +218,6 @@ const CreateShares: NextPage = () => {
                   setMinShares(value);
                 }
               }}
-              error={errorText}
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
@@ -241,7 +238,6 @@ const CreateShares: NextPage = () => {
               onFocus={(event) => {
                 event.currentTarget.select();
               }}
-              error={errorText}
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
@@ -325,11 +321,11 @@ const CreateShares: NextPage = () => {
                       onChange={(event) =>
                         setUsingTimeLock(event.currentTarget.checked)
                       }
-                      disabled={timeLockProvidersCount < 3}
+                      // disabled={timeLockProvidersCount < 3}
                     />
 
                     {usingTimeLock && (
-                      <>
+                      <Stack mt="lg">
                         <Text>Lock Duration:</Text>
 
                         <Group position="center" grow>
@@ -337,6 +333,7 @@ const CreateShares: NextPage = () => {
                             placeholder={`Enter ${durationFormat}`}
                             size="xs"
                             type="number"
+                            required
                           ></NumberInput>
 
                           <Select
@@ -380,27 +377,7 @@ const CreateShares: NextPage = () => {
                             setAdminPassword(event.currentTarget.value.trim());
                           }}
                         />
-
-                        <PasswordInput
-                          icon={
-                            shareablePasswordOK ? (
-                              <IconLockOpen size={16} color="green" />
-                            ) : (
-                              <IconLock size={16} color="red" />
-                            )
-                          }
-                          mb="md"
-                          placeholder="Enter shareable password here"
-                          label="Password to request unlock (Shareable)"
-                          required
-                          value={shareablePassword}
-                          onChange={(event) => {
-                            setShareablePassword(
-                              event.currentTarget.value.trim(),
-                            );
-                          }}
-                        />
-                      </>
+                      </Stack>
                     )}
                   </Stack>
                 </Accordion.Panel>
@@ -508,6 +485,17 @@ const CreateShares: NextPage = () => {
           </>
         )}
       </Stack>
+
+      <Modal
+        opened={!!errorText}
+        onClose={() => {
+          setErrorText("");
+        }}
+        title="Error!"
+        centered={true}
+      >
+        {errorText}
+      </Modal>
     </>
   );
 };
