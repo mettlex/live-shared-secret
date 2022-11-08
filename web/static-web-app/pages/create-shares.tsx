@@ -10,6 +10,7 @@ import {
   Text,
   Group,
   Select,
+  Loader,
 } from "@mantine/core";
 import {
   IconClockPause,
@@ -19,7 +20,8 @@ import {
 } from "@tabler/icons";
 import type { NextPage } from "next";
 import Head from "next/head";
-import { useState, useEffect, useCallback } from "react";
+import { create as createIpfs, IPFS } from "ipfs-core";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { aesGcmEncrypt } from "../utils/cryptography";
 import { encode as encodeBase64 } from "../utils/encoding/base64";
 import { createShares } from "../utils/sss-wasm";
@@ -39,12 +41,46 @@ const CreateShares: NextPage = () => {
   const [shareablePassword, setShareablePassword] = useState("");
   const [shareablePasswordOK, setShareablePasswordOK] = useState(false);
   const [timeLockProvidersCount, setTimeLockProvidersCount] = useState(0);
+  const [pubsubLoading, setPubSubLoading] = useState(true);
+  const defaultTopic = `timelock-${Math.floor(Date.now() / 1000 / 3600)}`;
+  const [pubsubTopic, setPubsubTopic] = useState(defaultTopic);
 
   const [passwords, setPasswords] = useState<{ text: string; done: boolean }[]>(
     [],
   );
 
   const [encryptedShares, setEncryptedShares] = useState<string[]>([]);
+
+  const ipfsRef = useRef<IPFS>();
+  const ipfsInitiated = useRef(false);
+  const subscribedTopics = useRef<string[]>([]);
+
+  const initIpfs = useCallback(async () => {
+    if (!ipfsInitiated.current) {
+      ipfsInitiated.current = true;
+      const ipfs = await createIpfs();
+
+      ipfs.pubsub.subscribe(pubsubTopic, (message) => {
+        try {
+          if (message.data.byteLength < 5000) {
+            const data = JSON.parse(new TextDecoder().decode(message.data));
+            console.log(data);
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      });
+
+      subscribedTopics.current.push(pubsubTopic);
+
+      ipfsRef.current = ipfs;
+      setPubSubLoading(false);
+    }
+  }, [pubsubTopic]);
+
+  useEffect(() => {
+    initIpfs();
+  }, [initIpfs]);
 
   const setRandomSecret = useCallback(() => {
     const randomSecret = encodeBase64(
@@ -89,6 +125,46 @@ const CreateShares: NextPage = () => {
 
     attemptToEncrypt();
   }, [allDone, attemptToEncrypt]);
+
+  const handleClickOnGetProvidersButton = useCallback(async () => {
+    if (!ipfsRef.current) {
+      return;
+    }
+
+    if (!ipfsRef.current.isOnline()) {
+      try {
+        await ipfsRef.current.start();
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    try {
+      subscribedTopics.current.forEach((t) => {
+        console.log(`unsubscribing ${t}`);
+        ipfsRef.current?.pubsub.unsubscribe(t).catch((_e) => {});
+      });
+
+      subscribedTopics.current = [];
+
+      console.log(`subscribing to ${pubsubTopic}`);
+
+      ipfsRef.current.pubsub.subscribe(pubsubTopic, (message) => {
+        try {
+          if (message.data.byteLength < 5000) {
+            const data = JSON.parse(new TextDecoder().decode(message.data));
+            console.log(data);
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      });
+    } catch (error) {
+      console.log(error);
+    }
+
+    subscribedTopics.current.push(pubsubTopic);
+  }, [pubsubTopic]);
 
   return (
     <>
@@ -196,6 +272,46 @@ const CreateShares: NextPage = () => {
 
                 <Accordion.Panel>
                   <Stack>
+                    <TextInput
+                      label=""
+                      placeholder="Enter IPFS PubSub Topic"
+                      value={pubsubTopic}
+                      onChange={(event) =>
+                        setPubsubTopic(event.currentTarget.value)
+                      }
+                    ></TextInput>
+
+                    {pubsubLoading && (
+                      <Stack align="center">
+                        <Loader color="grape" />
+                        <Text size="xs">Connecting to IPFS...</Text>
+                        <Text size="xs">
+                          Subscribing to PubSub topic: {pubsubTopic}
+                        </Text>
+                      </Stack>
+                    )}
+
+                    {!pubsubLoading && (
+                      <Button
+                        component="button"
+                        variant="gradient"
+                        gradient={{ from: "darkblue", to: "purple" }}
+                        size="sm"
+                        onClick={() => {
+                          setPubSubLoading(true);
+
+                          handleClickOnGetProvidersButton().then(() => {
+                            const tid = setTimeout(() => {
+                              setPubSubLoading(false);
+                              clearTimeout(tid);
+                            }, 1000);
+                          });
+                        }}
+                      >
+                        Get Providers
+                      </Button>
+                    )}
+
                     <Checkbox
                       label={
                         usingTimeLock
