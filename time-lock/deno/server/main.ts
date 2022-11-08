@@ -5,9 +5,40 @@ import {
   Status,
 } from "https://deno.land/x/oak@v11.1.0/mod.ts";
 import { RateLimiter } from "https://deno.land/x/oak_rate_limit@v0.1.1/mod.ts";
+import { parse } from "https://deno.land/std@0.162.0/flags/mod.ts";
 import { routes } from "./routes.ts";
 import cors from "./cors.ts";
 import { getTimestamp } from "../lib/decentralized-time/mod.ts";
+import { db } from "../database/mod.ts";
+import { Key } from "../database/models/key.ts";
+
+const flags = parse(Deno.args, {
+  boolean: ["drop_tables"],
+  default: {
+    drop_tables: false,
+  },
+});
+
+const dbConnectionSuccessful = await db.ping();
+
+if (!dbConnectionSuccessful) {
+  console.error("Database connection is not successful");
+  Deno.exit(1);
+}
+
+try {
+  db.link([Key]);
+
+  if (flags.drop_tables) {
+    await db.sync({
+      drop: true,
+    });
+  }
+} catch (error) {
+  console.error("Database sync is not successful");
+  console.error(error);
+  Deno.exit(1);
+}
 
 const router = new Router();
 
