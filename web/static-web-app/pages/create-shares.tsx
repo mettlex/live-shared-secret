@@ -6,7 +6,17 @@ import {
   Textarea,
   NumberInput,
   PasswordInput,
+  Checkbox,
+  Text,
+  Group,
+  Select,
 } from "@mantine/core";
+import {
+  IconClockPause,
+  IconLock,
+  IconLockOpen,
+  IconPlus,
+} from "@tabler/icons";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useState, useEffect, useCallback } from "react";
@@ -22,6 +32,13 @@ const CreateShares: NextPage = () => {
   const [firstStepDone, setFirstStepDone] = useState(false);
   const [allDone, setAllDone] = useState(false);
   const [refreshed, refresh] = useState("");
+  const [durationFormat, setDurationFormat] = useState("days");
+  const [usingTimeLock, setUsingTimeLock] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminPasswordOK, setAdminPasswordOK] = useState(false);
+  const [shareablePassword, setShareablePassword] = useState("");
+  const [shareablePasswordOK, setShareablePasswordOK] = useState(false);
+  const [timeLockProvidersCount, setTimeLockProvidersCount] = useState(0);
 
   const [passwords, setPasswords] = useState<{ text: string; done: boolean }[]>(
     [],
@@ -154,6 +171,125 @@ const CreateShares: NextPage = () => {
               autoCorrect="off"
               spellCheck="false"
             />
+
+            <Accordion
+              chevron={<IconPlus size={16} />}
+              styles={{
+                chevron: {
+                  "&[data-rotate]": {
+                    transform: "rotate(45deg)",
+                  },
+                },
+                control: {
+                  maxWidth: "80vw",
+                },
+              }}
+              variant="separated"
+              mb="60px"
+            >
+              <Accordion.Item value="share">
+                <Accordion.Control
+                  icon={<IconClockPause size={20} color="purple" />}
+                >
+                  Time-Lock (Optional)
+                </Accordion.Control>
+
+                <Accordion.Panel>
+                  <Stack>
+                    <Checkbox
+                      label={
+                        usingTimeLock
+                          ? `Using ${timeLockProvidersCount} federated time-lock providers`
+                          : "Use federated time-lock providers"
+                      }
+                      color="grape"
+                      size="xs"
+                      mt="md"
+                      checked={usingTimeLock}
+                      onChange={(event) =>
+                        setUsingTimeLock(event.currentTarget.checked)
+                      }
+                      disabled={timeLockProvidersCount < 3}
+                    />
+
+                    {usingTimeLock && (
+                      <>
+                        <Text>Lock Duration:</Text>
+
+                        <Group position="center" grow>
+                          <NumberInput
+                            placeholder={`Enter ${durationFormat}`}
+                            size="xs"
+                            type="number"
+                          ></NumberInput>
+
+                          <Select
+                            label=""
+                            placeholder="Pick one"
+                            data={[
+                              { value: "years", label: "Years" },
+                              { value: "months", label: "Months" },
+                              { value: "days", label: "Days" },
+                              { value: "minutes", label: "Minutes" },
+                            ]}
+                            value={durationFormat}
+                            onChange={(value) =>
+                              value && setDurationFormat(value)
+                            }
+                            size="xs"
+                            styles={{
+                              root: {
+                                width: "50px",
+                              },
+                            }}
+                            dropdownPosition="top"
+                          />
+                        </Group>
+
+                        <PasswordInput
+                          icon={
+                            adminPasswordOK ? (
+                              <IconLockOpen size={16} color="green" />
+                            ) : (
+                              <IconLock size={16} color="red" />
+                            )
+                          }
+                          mt="md"
+                          mb="md"
+                          placeholder="Enter admin password here"
+                          label="Admin Password (Never Share)"
+                          required
+                          value={adminPassword}
+                          onChange={(event) => {
+                            setAdminPassword(event.currentTarget.value.trim());
+                          }}
+                        />
+
+                        <PasswordInput
+                          icon={
+                            shareablePasswordOK ? (
+                              <IconLockOpen size={16} color="green" />
+                            ) : (
+                              <IconLock size={16} color="red" />
+                            )
+                          }
+                          mb="md"
+                          placeholder="Enter shareable password here"
+                          label="Password to request unlock (Shareable)"
+                          required
+                          value={shareablePassword}
+                          onChange={(event) => {
+                            setShareablePassword(
+                              event.currentTarget.value.trim(),
+                            );
+                          }}
+                        />
+                      </>
+                    )}
+                  </Stack>
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
 
             <Button
               type="submit"
