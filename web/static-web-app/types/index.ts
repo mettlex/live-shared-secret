@@ -5,6 +5,30 @@ export enum PageLinks {
   CreateShares = "create-shares",
 }
 
+export type TimeLockServer = {
+  base_url: string;
+  endpoints: {
+    create: string;
+    read: string;
+    update: string;
+    delete: string;
+    unlock: string;
+    time: string;
+  };
+  auth: {
+    headers: {
+      [key: string]: string;
+    };
+    body: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type TimeLockProvider = {
+  servers: TimeLockServer[];
+};
+
 export type ErrorResponse = {
   success: boolean;
   message: string;
