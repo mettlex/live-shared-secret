@@ -26,13 +26,6 @@ const flags = parse(Deno.args, {
   },
 });
 
-const dbConnectionSuccessful = await db.ping();
-
-if (!dbConnectionSuccessful) {
-  console.error("Database connection is not successful");
-  Deno.exit(1);
-}
-
 try {
   db.link([Key]);
 
