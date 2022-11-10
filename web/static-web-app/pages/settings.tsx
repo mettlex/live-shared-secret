@@ -31,7 +31,9 @@ if (typeof process.env.NEXT_PUBLIC_SERVERLESS_BASE_URLS === "string") {
 
 const Settings: NextPage = () => {
   const router = useRouter();
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(
+    process.env.NEXT_PUBLIC_SERVERLESS_API_ACCESS_TOKEN || "",
+  );
   const [baseUrl, setBaseUrl] = useState("");
   const [isCustom, setIsCustom] = useState(false);
   const { appService } = useContext(GlobalStateContext);
