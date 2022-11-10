@@ -10,7 +10,14 @@ import { routes } from "./routes.ts";
 import cors from "./cors.ts";
 import { getTimestamp } from "../lib/decentralized-time/mod.ts";
 import { db } from "../database/mod.ts";
-import { Key } from "../database/models/key.ts";
+import {
+  createKeyFromHttpRequest,
+  deleteKeyFromHttpRequest,
+  getStatusOfKeyFromHttpRequest,
+  Key,
+  readKeyFromHttpRequest,
+  unlockKeyFromHttpRequest,
+} from "../database/models/key.ts";
 
 const flags = parse(Deno.args, {
   boolean: ["drop_tables"],
@@ -42,8 +49,132 @@ try {
 
 const router = new Router();
 
+router.get("/", (ctx) => {
+  ctx.response.body = routes;
+});
+
 router.get(routes.GET_TIME, async (ctx) => {
   ctx.response.body = await getTimestamp();
+});
+
+router.post(routes.CREATE, async (ctx) => {
+  try {
+    const parsedBody = await ctx.request.body({
+      type: "json",
+    }).value;
+
+    const key = await createKeyFromHttpRequest({
+      ...parsedBody,
+    });
+
+    ctx.response.body = {
+      success: true,
+      key,
+    };
+  } catch (error) {
+    console.error(error);
+
+    ctx.response.body = {
+      success: false,
+      message: error.message || error,
+    };
+  }
+});
+
+router.post(routes.READ, async (ctx) => {
+  try {
+    const parsedBody = await ctx.request.body({
+      type: "json",
+    }).value;
+
+    const key = await readKeyFromHttpRequest({
+      ...parsedBody,
+    });
+
+    ctx.response.body = {
+      success: true,
+      key,
+    };
+  } catch (error) {
+    console.error(error);
+
+    ctx.response.body = {
+      success: false,
+      message: error.message || error,
+    };
+  }
+});
+
+router.post(routes.DELETE, async (ctx) => {
+  try {
+    const parsedBody = await ctx.request.body({
+      type: "json",
+    }).value;
+
+    const key = await deleteKeyFromHttpRequest({
+      ...parsedBody,
+    });
+
+    ctx.response.body = {
+      success: true,
+      key,
+    };
+  } catch (error) {
+    console.error(error);
+
+    ctx.response.body = {
+      success: false,
+      message: error.message || error,
+    };
+  }
+});
+
+router.post(routes.STATUS, async (ctx) => {
+  try {
+    const parsedBody = await ctx.request.body({
+      type: "json",
+    }).value;
+
+    const key = await getStatusOfKeyFromHttpRequest({
+      ...parsedBody,
+    });
+
+    ctx.response.body = {
+      success: true,
+      key,
+    };
+  } catch (error) {
+    console.error(error);
+
+    ctx.response.body = {
+      success: false,
+      message: error.message || error,
+    };
+  }
+});
+
+router.post(routes.UNLOCK, async (ctx) => {
+  try {
+    const parsedBody = await ctx.request.body({
+      type: "json",
+    }).value;
+
+    const result = await unlockKeyFromHttpRequest({
+      ...parsedBody,
+    });
+
+    ctx.response.body = {
+      success: true,
+      ...result,
+    };
+  } catch (error) {
+    console.error(error);
+
+    ctx.response.body = {
+      success: false,
+      message: error.message || error,
+    };
+  }
 });
 
 const app = new Application();
@@ -88,3 +219,20 @@ const port = 8001;
 console.log(`Listening at port ${port}`);
 
 await app.listen({ port });
+
+export type TimeLockServer = {
+  base_url: string;
+  endpoints: {
+    create: string;
+    read: string;
+    update: string;
+    delete: string;
+    unlock: string;
+    status: string;
+    time: string;
+  };
+  auth: {
+    headers: Record<string, string>;
+    body: Record<string, string>;
+  };
+};
