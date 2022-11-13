@@ -12,6 +12,8 @@ import {
   Select,
   Loader,
   Modal,
+  List,
+  Card,
 } from "@mantine/core";
 import {
   IconClockPause,
@@ -23,10 +25,17 @@ import type { NextPage } from "next";
 import Head from "next/head";
 import { useState, useEffect, useCallback, useRef, createRef } from "react";
 import { TimeLockServer } from "../types";
-import { getTimeLockServers } from "../utils/api";
+import { createTimeLockKey, getTimeLockServers } from "../utils/api";
 import { aesGcmEncrypt } from "../utils/cryptography";
 import { encode as encodeBase64 } from "../utils/encoding/base64";
 import { createShares } from "../utils/sss-wasm";
+
+enum DurationFormat {
+  MINUTES = "minutes",
+  DAYS = "days",
+  MONTHS = "months",
+  YEARS = "years",
+}
 
 const CreateShares: NextPage = () => {
   const [totalShares, setTotalShares] = useState(3);
@@ -36,7 +45,9 @@ const CreateShares: NextPage = () => {
   const [firstStepDone, setFirstStepDone] = useState(false);
   const [allDone, setAllDone] = useState(false);
   const [refreshed, refresh] = useState("");
-  const [durationFormat, setDurationFormat] = useState("days");
+  const [durationFormat, setDurationFormat] = useState<DurationFormat>(
+    DurationFormat.DAYS,
+  );
   const [timeLockDurationNumber, setTimeLockDurationNumber] =
     useState<number>();
   const [usingTimeLock, setUsingTimeLock] = useState(false);
@@ -46,7 +57,12 @@ const CreateShares: NextPage = () => {
   const [timeLockAccordingValue, setTimeLockAccordingValue] = useState<
     string | null
   >(null);
-  const [timeLockProvidersCount, setTimeLockProvidersCount] = useState(0);
+  const [maxTimeLockServersCount, setMaxTimeLockServersCount] = useState(1);
+  const [minTimeLockServersCount, setMinTimeLockServersCount] = useState(1);
+  const [maxTimeLockServersCountError, setMaxTimeLockServersCountError] =
+    useState("");
+  const [minTimeLockServersCountError, setMinTimeLockServersCountError] =
+    useState("");
   const defaultServerListProvider = "https://timelock.onrender.com";
   const [providerUrl, setProviderUrl] = useState(defaultServerListProvider);
   const [usedProviderUrl, setUsedProviderUrl] = useState(
@@ -58,32 +74,109 @@ const CreateShares: NextPage = () => {
 
   const [adminPasswordError, setAdminPasswordError] = useState("");
 
+  const [firstSecretPart, setFirstSecretPart] = useState("");
+  const [secondSecretPart, setSecondSecretPart] = useState("");
+  const [timeLockIv, setTimeLockIv] = useState("");
+  const [timeLockUuids, setTimeLockUuids] = useState<string[]>([]);
+
   const [passwords, setPasswords] = useState<{ text: string; done: boolean }[]>(
     [],
   );
 
   const [encryptedShares, setEncryptedShares] = useState<string[]>([]);
 
-  const adminPasswordInputRef = createRef<HTMLInputElement>();
+  const sendKeyToTimeServers = useCallback(async () => {
+    if (!firstSecretPart || !usingTimeLock || !timeLockOK) {
+      return;
+    }
+
+    if (timeLockServers.length > 2) {
+      throw new Error("Not Implemented Yet");
+    }
+
+    const firstPart = firstSecretPart;
+    const secondPart = secondSecretPart;
+
+    const iv = "<NOT SENT>";
+
+    let encryptedPartialData = await aesGcmEncrypt({
+      plaintext: firstPart,
+      password: secondPart,
+    });
+
+    setTimeLockIv(encryptedPartialData.slice(0, 24));
+
+    encryptedPartialData = encryptedPartialData.slice(24);
+
+    const uuids = await createTimeLockKey({
+      timeLockServers,
+      adminPassword,
+      recoveryPassword: secondPart,
+      iv,
+      encryptedPartialData,
+      timeLockDuration: 0,
+      setErrorText,
+    });
+
+    if (uuids instanceof Array) {
+      setSecret(secondPart);
+      setTimeLockUuids(uuids);
+    }
+  }, [
+    adminPassword,
+    firstSecretPart,
+    secondSecretPart,
+    timeLockOK,
+    timeLockServers,
+    usingTimeLock,
+  ]);
+
+  useEffect(() => {
+    if (!secret) {
+      return;
+    }
+
+    if (!usingTimeLock || !timeLockOK) {
+      return;
+    }
+
+    const delimiter = " ";
+    const index = secret.indexOf(delimiter);
+
+    if (secret.includes(delimiter) && index > 0) {
+      setFirstSecretPart(secret.slice(0, index).trim());
+      setSecondSecretPart(secret.slice(index).trim());
+    } else {
+      const index = Math.floor(secret.length / 2);
+      setFirstSecretPart(secret.slice(0, index).trim());
+      setSecondSecretPart(secret.slice(index).trim());
+    }
+  }, [usingTimeLock, timeLockOK, secret]);
+
+  useEffect(() => {
+    if (timeLockServers.length > 0) {
+      setMaxTimeLockServersCount(Math.min(10, timeLockServers.length));
+    }
+  }, [timeLockServers.length]);
+
+  useEffect(() => {
+    setMinTimeLockServersCount(Math.ceil(maxTimeLockServersCount * (2 / 3)));
+  }, [maxTimeLockServersCount]);
 
   useEffect(() => {
     if (timeLockAccordingValue === "timelock") {
-      if (adminPasswordInputRef.current) {
-        adminPasswordInputRef.current.scrollIntoView();
-      }
-
       setUsingTimeLock(true);
     } else {
       setUsingTimeLock(false);
     }
-  }, [adminPasswordInputRef, timeLockAccordingValue]);
+  }, [timeLockAccordingValue]);
 
   const setRandomSecret = useCallback(() => {
     const randomSecret = encodeBase64(
       crypto.getRandomValues(new Uint8Array(32)),
     );
 
-    setSecret(randomSecret);
+    setSecret(randomSecret?.trim());
   }, []);
 
   useEffect(() => {
@@ -104,15 +197,40 @@ const CreateShares: NextPage = () => {
       minShares,
     );
 
-    const encShares = await Promise.all(
+    let encShares = await Promise.all(
       shares.map(
         async (s, i) =>
           await aesGcmEncrypt({ plaintext: s, password: passwords[i].text }),
       ),
     );
 
+    if (usingTimeLock && timeLockOK && timeLockUuids.length > 0) {
+      encShares = encShares.map((share) => {
+        const prefix = "timelocked_";
+
+        const json = JSON.stringify({
+          share,
+          uuids: timeLockUuids,
+          iv: timeLockIv,
+          timeLockServers,
+        });
+
+        return `${prefix}${encodeBase64(json)}`;
+      });
+    }
+
     setEncryptedShares(encShares);
-  }, [minShares, passwords, secret, totalShares]);
+  }, [
+    minShares,
+    passwords,
+    secret,
+    timeLockIv,
+    timeLockOK,
+    timeLockServers,
+    timeLockUuids,
+    totalShares,
+    usingTimeLock,
+  ]);
 
   useEffect(() => {
     if (!allDone) {
@@ -224,8 +342,14 @@ const CreateShares: NextPage = () => {
               ) {
                 setFirstStepDone(true);
 
-                if (usingTimeLock) {
+                if (usingTimeLock && timeLockOK) {
                   setCreatingKey(true);
+
+                  try {
+                    await sendKeyToTimeServers();
+                  } catch (error) {
+                    setErrorText((error as any)?.message || error || "");
+                  }
                 }
               }
             }}
@@ -233,7 +357,7 @@ const CreateShares: NextPage = () => {
             <NumberInput
               min={3}
               max={100}
-              style={{ width: "80vw", maxWidth: "400px" }}
+              style={{ width: "85vw", maxWidth: "400px" }}
               mb="xl"
               placeholder="Enter the total number of shares"
               label="Total Shares"
@@ -253,7 +377,7 @@ const CreateShares: NextPage = () => {
             <NumberInput
               min={2}
               max={totalShares}
-              style={{ width: "80vw", maxWidth: "400px" }}
+              style={{ width: "85vw", maxWidth: "400px" }}
               mb="xl"
               placeholder="Enter the minimum number of shares"
               label="Minimum Shares"
@@ -272,14 +396,14 @@ const CreateShares: NextPage = () => {
 
             <PasswordInput
               maxLength={63}
-              style={{ width: "80vw", maxWidth: "400px" }}
+              style={{ width: "85vw", maxWidth: "400px" }}
               mb="xl"
               placeholder="Enter the secret text"
               label="The Secret"
               required
               value={secret}
               onChange={(event) => {
-                setSecret(event.currentTarget.value);
+                setSecret(event.currentTarget.value?.trim());
               }}
               onFocus={(event) => {
                 event.currentTarget.select();
@@ -299,7 +423,7 @@ const CreateShares: NextPage = () => {
                   },
                 },
                 control: {
-                  maxWidth: "80vw",
+                  maxWidth: "85vw",
                 },
               }}
               variant="separated"
@@ -358,69 +482,177 @@ const CreateShares: NextPage = () => {
                       </Button>
                     )}
 
-                    {usingTimeLock && (
-                      <Stack mt="lg">
-                        <Text>Lock Duration:</Text>
+                    <Card>
+                      <Card.Section>
+                        <Text size="xs">Locking Strategy:</Text>
+                      </Card.Section>
+                      <Card.Section>
+                        <Stack spacing="xs">
+                          <Text size="xs" color="dimmed">
+                            You can use one of the two options:
+                          </Text>
 
-                        <Group position="center" grow>
-                          <NumberInput
-                            placeholder={`Enter ${durationFormat}`}
-                            size="xs"
-                            type="number"
-                            required
-                            autoComplete="off"
-                            autoCorrect="off"
-                            value={timeLockDurationNumber}
-                            onChange={(value) =>
-                              setTimeLockDurationNumber(value || 0)
-                            }
-                          ></NumberInput>
+                          <List type="ordered" size="xs" spacing="xs">
+                            <List.Item>
+                              <Text size="xs">
+                                {`If you don't use any space in your secret,`}
+                              </Text>
+                              <Text size="xs">
+                                the first half of your secret will be
+                                time-locked
+                              </Text>
+                            </List.Item>
+                            <List.Item>
+                              <Text size="xs">
+                                Use a space in your secret to split your secret
+                              </Text>
+                              <Text size="xs">
+                                to time-lock the part left side of the space
+                              </Text>
+                            </List.Item>
+                          </List>
+                        </Stack>
+                      </Card.Section>
+                    </Card>
 
-                          <Select
-                            label=""
-                            placeholder="Pick one"
-                            data={[
-                              { value: "years", label: "Years" },
-                              { value: "months", label: "Months" },
-                              { value: "days", label: "Days" },
-                              { value: "minutes", label: "Minutes" },
-                            ]}
-                            value={durationFormat}
-                            onChange={(value) =>
-                              value && setDurationFormat(value)
-                            }
-                            size="xs"
-                            styles={{
-                              root: {
-                                width: "50px",
-                              },
-                            }}
-                            dropdownPosition="top"
-                          />
-                        </Group>
-
-                        <PasswordInput
-                          icon={
-                            adminPasswordOK ? (
-                              <IconLockOpen size={16} color="green" />
-                            ) : (
-                              <IconLock size={16} color="red" />
-                            )
+                    <Stack>
+                      <NumberInput
+                        label="Maximum servers to use"
+                        placeholder={`Enter the number of servers to use`}
+                        size="xs"
+                        type="number"
+                        required
+                        autoComplete="off"
+                        autoCorrect="off"
+                        value={maxTimeLockServersCount}
+                        error={maxTimeLockServersCountError}
+                        onChange={(value) => {
+                          if (typeof value !== "number") {
+                            return;
                           }
-                          mt="md"
-                          mb="md"
-                          placeholder="Enter admin password here"
-                          label="Admin Password (Never Share)"
+
+                          if (value > 0 && value <= timeLockServers.length) {
+                            setMaxTimeLockServersCount(value);
+                            setMaxTimeLockServersCountError("");
+                          } else {
+                            if (value < 1) {
+                              setMaxTimeLockServersCountError(
+                                "It can't be less than 1 server",
+                              );
+
+                              return;
+                            }
+
+                            if (value > timeLockServers.length) {
+                              setMaxTimeLockServersCountError(
+                                "It can't be more than the number of found servers",
+                              );
+
+                              return;
+                            }
+                          }
+                        }}
+                      ></NumberInput>
+
+                      <NumberInput
+                        label="Minimum servers required"
+                        placeholder={`Enter the  minimum number of servers to unlock`}
+                        size="xs"
+                        type="number"
+                        required
+                        autoComplete="off"
+                        autoCorrect="off"
+                        value={minTimeLockServersCount}
+                        error={minTimeLockServersCountError}
+                        onChange={(value) => {
+                          if (typeof value !== "number") {
+                            return;
+                          }
+
+                          if (value > 0 && value <= maxTimeLockServersCount) {
+                            setMinTimeLockServersCount(value);
+                            setMinTimeLockServersCountError("");
+                          } else {
+                            if (value < 1) {
+                              setMinTimeLockServersCountError(
+                                "It can't be less than 1 server",
+                              );
+
+                              return;
+                            }
+
+                            if (value > maxTimeLockServersCount) {
+                              setMinTimeLockServersCountError(
+                                "It can't be more than the number of max servers",
+                              );
+
+                              return;
+                            }
+                          }
+                        }}
+                      ></NumberInput>
+                    </Stack>
+
+                    <Stack>
+                      <Text size="xs">Lock Duration:</Text>
+
+                      <Group position="center" grow>
+                        <NumberInput
+                          placeholder={`Enter ${durationFormat}`}
+                          size="xs"
+                          type="number"
                           required
-                          value={adminPassword}
-                          onChange={(event) => {
-                            setAdminPassword(event.currentTarget.value.trim());
+                          autoComplete="off"
+                          autoCorrect="off"
+                          value={timeLockDurationNumber}
+                          onChange={(value) =>
+                            setTimeLockDurationNumber(value || 0)
+                          }
+                        ></NumberInput>
+
+                        <Select
+                          label=""
+                          placeholder="Pick one"
+                          data={[
+                            { value: DurationFormat.YEARS, label: "Years" },
+                            { value: DurationFormat.MONTHS, label: "Months" },
+                            { value: DurationFormat.DAYS, label: "Days" },
+                            { value: DurationFormat.MINUTES, label: "Minutes" },
+                          ]}
+                          value={durationFormat}
+                          onChange={(value) =>
+                            value && setDurationFormat(value as DurationFormat)
+                          }
+                          size="xs"
+                          styles={{
+                            root: {
+                              width: "50px",
+                            },
                           }}
-                          ref={adminPasswordInputRef}
-                          error={adminPasswordError}
+                          dropdownPosition="top"
                         />
-                      </Stack>
-                    )}
+                      </Group>
+
+                      <PasswordInput
+                        icon={
+                          adminPasswordOK ? (
+                            <IconLockOpen size={16} color="green" />
+                          ) : (
+                            <IconLock size={16} color="red" />
+                          )
+                        }
+                        mt="md"
+                        mb="md"
+                        placeholder="Enter admin password here"
+                        label="Admin Password (Never Share)"
+                        required
+                        value={adminPassword}
+                        onChange={(event) => {
+                          setAdminPassword(event.currentTarget.value.trim());
+                        }}
+                        error={adminPasswordError}
+                      />
+                    </Stack>
                   </Stack>
                 </Accordion.Panel>
               </Accordion.Item>
@@ -428,7 +660,7 @@ const CreateShares: NextPage = () => {
 
             <Button
               type="submit"
-              style={{ width: "80vw", maxWidth: "400px" }}
+              style={{ width: "85vw", maxWidth: "400px" }}
               variant="gradient"
               gradient={{ from: "darkblue", to: "purple" }}
               size="md"
@@ -452,7 +684,7 @@ const CreateShares: NextPage = () => {
             {new Array(totalShares).fill(0).map((_, i) => (
               <Stack key={i} mb="lg" justify="flex-start">
                 <PasswordInput
-                  style={{ width: "80vw", maxWidth: "400px" }}
+                  style={{ width: "85vw", maxWidth: "400px" }}
                   placeholder={`Enter the password for share #${i + 1}`}
                   label={`Password For Share #${i + 1}`}
                   required
@@ -484,7 +716,7 @@ const CreateShares: NextPage = () => {
                 />
 
                 <Button
-                  style={{ width: "80vw", maxWidth: "400px" }}
+                  style={{ width: "85vw", maxWidth: "400px" }}
                   variant="gradient"
                   gradient={{ from: "darkblue", to: "purple" }}
                   size="sm"
@@ -514,7 +746,7 @@ const CreateShares: NextPage = () => {
               <Textarea
                 key={i}
                 minRows={7}
-                style={{ width: "80vw", maxWidth: "400px" }}
+                style={{ width: "85vw", maxWidth: "400px" }}
                 styles={{ input: { maxHeight: "20vh", height: "200px" } }}
                 label={`Encrypted Share #${i + 1}`}
                 mb="lg"

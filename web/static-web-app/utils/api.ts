@@ -245,3 +245,24 @@ export const getTimeLockServers = async ({
     } as ErrorResponse;
   }
 };
+
+export const createTimeLockKey = async ({
+  timeLockServers,
+  adminPassword,
+  recoveryPassword,
+  iv,
+  encryptedPartialData,
+  timeLockDuration,
+  setErrorText,
+}: {
+  timeLockServers: TimeLockServer[];
+  adminPassword: string;
+  recoveryPassword: string;
+  iv: string;
+  encryptedPartialData: string;
+  timeLockDuration: number;
+  setErrorText: (errorText: string) => void;
+}): Promise<string[] | void> => {
+  // TODO: implement the API later
+  return ["test uuid 1", "test uuid 2"];
+};
