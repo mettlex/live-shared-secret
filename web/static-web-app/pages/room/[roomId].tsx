@@ -11,9 +11,9 @@ import {
 } from "@mantine/core";
 import {
   IconChartPie,
+  IconClockPause,
   IconLock,
   IconLockOpen,
-  IconPlus,
   IconShieldLock,
 } from "@tabler/icons";
 import { useActor } from "@xstate/react";
@@ -29,7 +29,13 @@ import {
   useState,
 } from "react";
 import { GlobalStateContext } from "../../store/global";
-import { RoomData } from "../../types";
+import {
+  RoomData,
+  TimeLockServer,
+  TimeLockServerCreateKeyResult,
+  TimeLockServerInfoForShare,
+  TimeLockServerInfoWithShare,
+} from "../../types";
 import { addEncryptedShare, getRoomData } from "../../utils/api";
 import {
   aesGcmDecryptToUint8,
@@ -50,12 +56,14 @@ const Room: NextPage = () => {
   const [publicKey, setPublicKey] = useState("");
   const [ownPublicKey, setOwnPublicKey] = useState("");
   const [encryptedShare, setEncryptedShare] = useState("");
+  const [encryptedShareCipherText, setEncryptedShareCipherText] = useState("");
   const [encryptedShareUsingPublicKey, setEncryptedShareUsingPublicKey] =
     useState("");
   const [password, setPassword] = useState("");
   const [errorText, setErrorText] = useState("");
   const [roomData, setRoomData] = useState<RoomData>();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const timeLockInfo = useRef<string>();
   const router = useRouter();
 
   const { roomId } = router.query;
@@ -65,10 +73,38 @@ const Room: NextPage = () => {
     encryptedShare: encryptedShareInContext,
   } = state.context;
 
+  useEffect(() => {
+    const timeLockedPrefix = "timelocked_";
+
+    let ciphertext = encryptedShare;
+
+    if (ciphertext.startsWith(timeLockedPrefix)) {
+      try {
+        const parsed = JSON.parse(
+          new TextDecoder().decode(
+            decodeBase64(ciphertext.replace(timeLockedPrefix, "")),
+          ),
+        ) as TimeLockServerInfoWithShare;
+
+        ciphertext = parsed.share;
+
+        timeLockInfo.current = encodeBase64(JSON.stringify(parsed.timeLock));
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    setEncryptedShareCipherText(ciphertext);
+  }, [encryptedShare]);
+
   const attemptToDecrypt = useCallback(async () => {
+    if (!encryptedShareCipherText) {
+      return;
+    }
+
     try {
       const decryptedShare = await aesGcmDecryptToUint8({
-        ciphertext: encryptedShare,
+        ciphertext: encryptedShareCipherText,
         password,
       });
 
@@ -94,7 +130,7 @@ const Room: NextPage = () => {
       // console.error(error);
       setDecrypted(false);
     }
-  }, [encryptedShare, password, publicKey]);
+  }, [encryptedShareCipherText, password, publicKey]);
 
   const completedProgress = useMemo(() => {
     if (!roomData) {
@@ -212,7 +248,7 @@ const Room: NextPage = () => {
             <Accordion
               styles={{
                 control: {
-                  maxWidth: "80vw",
+                  maxWidth: "85vw",
                   paddingLeft: "5px",
                   paddingRight: "5px",
                 },
@@ -220,11 +256,11 @@ const Room: NextPage = () => {
               variant="filled"
               mt="xs"
             >
-              <Accordion.Item value="share">
+              <Accordion.Item value="publickey">
                 <Accordion.Control
-                  icon={<IconShieldLock size={20} color="lightblue" />}
+                  icon={<IconShieldLock size={16} color="skyblue" />}
                 >
-                  Public Key
+                  <Text size="sm">Public Key</Text>
                 </Accordion.Control>
 
                 <Accordion.Panel>
@@ -255,7 +291,7 @@ const Room: NextPage = () => {
             <Accordion
               styles={{
                 control: {
-                  maxWidth: "80vw",
+                  maxWidth: "85vw",
                   paddingLeft: "5px",
                   paddingRight: "5px",
                 },
@@ -265,9 +301,9 @@ const Room: NextPage = () => {
             >
               <Accordion.Item value="share">
                 <Accordion.Control
-                  icon={<IconChartPie size={20} color="lightblue" />}
+                  icon={<IconChartPie size={16} color="skyblue" />}
                 >
-                  Your Encrypted Share
+                  <Text size="sm">Your Encrypted Share</Text>
                 </Accordion.Control>
 
                 <Accordion.Panel>
@@ -295,6 +331,49 @@ const Room: NextPage = () => {
               </Accordion.Item>
             </Accordion>
 
+            {timeLockInfo.current && (
+              <Accordion
+                styles={{
+                  control: {
+                    maxWidth: "85vw",
+                    paddingLeft: "5px",
+                    paddingRight: "5px",
+                  },
+                }}
+                variant="filled"
+                mt="xs"
+              >
+                <Accordion.Item value="timelock">
+                  <Accordion.Control
+                    icon={<IconClockPause size={16} color="skyblue" />}
+                  >
+                    <Text size="sm">Time-Lock Server Info</Text>
+                  </Accordion.Control>
+
+                  <Accordion.Panel>
+                    <Textarea
+                      minRows={4}
+                      styles={{
+                        input: {
+                          maxHeight: "18vh",
+                          height: "200px",
+                        },
+                      }}
+                      placeholder="Time-Lock Server Info"
+                      label=""
+                      required
+                      value={timeLockInfo.current}
+                      onChange={(_event) => {}}
+                      autoComplete="off"
+                      autoCapitalize="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                    />
+                  </Accordion.Panel>
+                </Accordion.Item>
+              </Accordion>
+            )}
+
             <PasswordInput
               icon={
                 decrypted ? (
@@ -303,7 +382,7 @@ const Room: NextPage = () => {
                   <IconLock size={16} color="red" />
                 )
               }
-              style={{ width: "80vw", maxWidth: "400px" }}
+              style={{ width: "85vw", maxWidth: "400px" }}
               mb="xl"
               placeholder="Enter your password to decrypt your share"
               label="Your Password"
@@ -316,7 +395,7 @@ const Room: NextPage = () => {
 
             <Button
               type="submit"
-              style={{ width: "80vw", maxWidth: "400px" }}
+              style={{ width: "85vw", maxWidth: "400px" }}
               variant="gradient"
               gradient={{ from: "darkblue", to: "purple" }}
               size="md"

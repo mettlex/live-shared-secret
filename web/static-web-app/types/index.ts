@@ -2,7 +2,8 @@ export enum PageLinks {
   Settings = "/settings",
   EnterRoom = "/enter-room",
   CreateRoom = "/create-room",
-  CreateShares = "create-shares",
+  CreateShares = "/create-shares",
+  TimeLock = "/time-lock",
 }
 
 export enum DurationFormat {
@@ -12,6 +13,39 @@ export enum DurationFormat {
   MONTHS = "months",
   YEARS = "years",
 }
+
+export type TimeLockServerErrorResponse = {
+  statusCode?: number;
+  message?: string;
+};
+
+export type TimeLockServerSuccessStatusResponse = {
+  success?: true;
+  message?: string;
+  key?: {
+    unlock_at?: string | null;
+    delete_at?: string;
+  };
+};
+
+export type TimeLockServerStatusApiResponse =
+  | TimeLockServerSuccessStatusResponse
+  | TimeLockServerErrorResponse;
+
+export type TimeLockServerCreateKeyResult = {
+  server?: TimeLockServer;
+  uuid?: string;
+};
+
+export type TimeLockServerInfoForShare = {
+  results: TimeLockServerCreateKeyResult[];
+  iv: string;
+};
+
+export type TimeLockServerInfoWithShare = {
+  share: string;
+  timeLock: TimeLockServerInfoForShare;
+};
 
 export interface TimeLockServer {
   base_url?: string;

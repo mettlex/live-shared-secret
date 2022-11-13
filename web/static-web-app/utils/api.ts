@@ -4,6 +4,10 @@ import {
   RoomData,
   TimeLockServerCreateKeyApiReponse,
   TimeLockServer,
+  TimeLockServerCreateKeyResult,
+  TimeLockServerStatusApiResponse,
+  TimeLockServerErrorResponse,
+  TimeLockServerSuccessStatusResponse,
 } from "../types";
 
 export const getRoomData = async ({
@@ -274,12 +278,7 @@ export const createTimeLockKey = async ({
   encryptedPartialData: string;
   lockDurationInSeconds: number;
   setErrorText: (errorText: string) => void;
-}): Promise<
-  {
-    server?: TimeLockServer;
-    uuid?: string;
-  }[]
-> => {
+}): Promise<TimeLockServerCreateKeyResult[]> => {
   const results = await Promise.all(
     timeLockServers.map(async (server) => {
       const { routes, base_url, authentication } = server;
@@ -332,4 +331,74 @@ export const createTimeLockKey = async ({
     uuid: r?.response?.key?.uuid,
     server: r?.server,
   }));
+};
+
+export const getKeyStatus = async ({
+  results,
+  setErrorText,
+}: {
+  results: TimeLockServerCreateKeyResult[];
+  setErrorText: (errorText: string) => void;
+}) => {
+  for (const createApiResult of results) {
+    const { server, uuid } = createApiResult;
+
+    if (!server || !uuid) {
+      setErrorText("Invaid Time-Lock Server Info");
+      return;
+    }
+
+    const { base_url, routes, authentication } = server;
+
+    if (!routes) {
+      setErrorText("Invaid Time-Lock Server Info");
+      return undefined;
+    }
+
+    const { STATUS } = routes;
+
+    const statusUrl = `${base_url}${STATUS}`;
+
+    const baseHeaders = {
+      "Content-Type": "application/json",
+    };
+
+    try {
+      const response = await fetch(statusUrl, {
+        method: "POST",
+        headers: authentication?.headers
+          ? {
+              ...authentication.headers,
+              ...baseHeaders,
+            }
+          : baseHeaders,
+        body: JSON.stringify({
+          ...(authentication?.body ? authentication.body : {}),
+          uuid,
+        }),
+      });
+
+      const statusApiResult =
+        (await response.json()) as TimeLockServerStatusApiResponse;
+
+      if (
+        typeof (statusApiResult as TimeLockServerErrorResponse)?.statusCode ===
+          "number" &&
+        (statusApiResult as TimeLockServerErrorResponse)?.statusCode !== 200
+      ) {
+        setErrorText(
+          `Error ${
+            (statusApiResult as TimeLockServerErrorResponse).statusCode
+          }. ${statusApiResult.message}`,
+        );
+
+        return undefined;
+      }
+
+      return statusApiResult as TimeLockServerSuccessStatusResponse;
+    } catch (error) {
+      console.error(error);
+      setErrorText((error as any)?.message || error);
+    }
+  }
 };

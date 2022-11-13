@@ -24,7 +24,12 @@ import {
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { DurationFormat, TimeLockServer } from "../types";
+import {
+  DurationFormat,
+  TimeLockServer,
+  TimeLockServerInfoForShare,
+  TimeLockServerInfoWithShare,
+} from "../types";
 import { createTimeLockKey, getTimeLockServers } from "../utils/api";
 import { aesGcmEncrypt } from "../utils/cryptography";
 import { encode as encodeBase64 } from "../utils/encoding/base64";
@@ -130,7 +135,10 @@ const CreateShares: NextPage = () => {
       setTimeLockCreateKeyResults(results);
 
       const cipherText = await aesGcmEncrypt({
-        plaintext: JSON.stringify({ results, iv: tlHiddenIv }),
+        plaintext: JSON.stringify({
+          results,
+          iv: tlHiddenIv,
+        } as TimeLockServerInfoForShare),
         password: adminPassword,
       });
 
@@ -229,13 +237,15 @@ const CreateShares: NextPage = () => {
       encShares = encShares.map((share) => {
         const prefix = "timelocked_";
 
-        const json = JSON.stringify({
+        const data: TimeLockServerInfoWithShare = {
           share,
           timeLock: {
             results: timeLockCreateKeyResults,
             iv: timeLockIv,
           },
-        });
+        };
+
+        const json = JSON.stringify(data);
 
         return `${prefix}${encodeBase64(json)}`;
       });
