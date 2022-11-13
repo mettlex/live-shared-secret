@@ -21,8 +21,9 @@ import {
 } from "@tabler/icons";
 import type { NextPage } from "next";
 import Head from "next/head";
-import { create as createIpfs, IPFS } from "ipfs-core";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { TimeLockServer } from "../types";
+import { getTimeLockServers } from "../utils/api";
 import { aesGcmEncrypt } from "../utils/cryptography";
 import { encode as encodeBase64 } from "../utils/encoding/base64";
 import { createShares } from "../utils/sss-wasm";
@@ -39,10 +40,13 @@ const CreateShares: NextPage = () => {
   const [usingTimeLock, setUsingTimeLock] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminPasswordOK, setAdminPasswordOK] = useState(false);
+  const [timeLockOK, setTimeLockOK] = useState(false);
   const [timeLockProvidersCount, setTimeLockProvidersCount] = useState(0);
-  const [pubsubLoading, setPubSubLoading] = useState(true);
-  const defaultTopic = `timelock-${Math.floor(Date.now() / 1000 / 3600)}`;
-  const [pubsubTopic, setPubsubTopic] = useState(defaultTopic);
+  const [providerUrl, setProviderUrl] = useState(
+    "https://timelock.onrender.com",
+  );
+  const [timeLockServers, setTimeLockServers] = useState<TimeLockServer[]>([]);
+  const [timeLockServersLoading, setTimeLockServersLoading] = useState(true);
 
   const [passwords, setPasswords] = useState<{ text: string; done: boolean }[]>(
     [],
@@ -50,36 +54,9 @@ const CreateShares: NextPage = () => {
 
   const [encryptedShares, setEncryptedShares] = useState<string[]>([]);
 
-  const ipfsRef = useRef<IPFS>();
-  const ipfsInitiated = useRef(false);
-  const subscribedTopics = useRef<string[]>([]);
-
-  const initIpfs = useCallback(async () => {
-    if (!ipfsInitiated.current) {
-      ipfsInitiated.current = true;
-      const ipfs = await createIpfs();
-
-      ipfs.pubsub.subscribe(pubsubTopic, (message) => {
-        try {
-          if (message.data.byteLength < 5000) {
-            const data = JSON.parse(new TextDecoder().decode(message.data));
-            console.log(data);
-          }
-        } catch (error) {
-          console.log(error);
-        }
-      });
-
-      subscribedTopics.current.push(pubsubTopic);
-
-      ipfsRef.current = ipfs;
-      setPubSubLoading(false);
-    }
-  }, [pubsubTopic]);
-
   useEffect(() => {
-    initIpfs();
-  }, [initIpfs]);
+    console.log(timeLockServers);
+  }, [timeLockServers]);
 
   const setRandomSecret = useCallback(() => {
     const randomSecret = encodeBase64(
@@ -125,45 +102,27 @@ const CreateShares: NextPage = () => {
     attemptToEncrypt();
   }, [allDone, attemptToEncrypt]);
 
-  const handleClickOnGetProvidersButton = useCallback(async () => {
-    if (!ipfsRef.current) {
+  const fetchTimeLockServers = useCallback(async () => {
+    if (!timeLockServersLoading) {
       return;
     }
 
-    if (!ipfsRef.current.isOnline()) {
-      try {
-        await ipfsRef.current.start();
-      } catch (error) {
-        console.log(error);
-      }
+    const servers = await getTimeLockServers({
+      url: providerUrl,
+      token: process.env.NEXT_PUBLIC_TIMELOCK_API_ACCESS_TOKEN || "",
+      setErrorText,
+    });
+
+    if (servers instanceof Array) {
+      setTimeLockServers(servers);
     }
 
-    try {
-      subscribedTopics.current.forEach((t) => {
-        console.log(`unsubscribing ${t}`);
-        ipfsRef.current?.pubsub.unsubscribe(t).catch((_e) => {});
-      });
+    setTimeLockServersLoading(false);
+  }, [providerUrl, timeLockServersLoading]);
 
-      subscribedTopics.current = [];
-
-      console.log(`subscribing to ${pubsubTopic}`);
-
-      ipfsRef.current.pubsub.subscribe(pubsubTopic, (message) => {
-        try {
-          if (message.data.byteLength < 5000) {
-            const data = JSON.parse(new TextDecoder().decode(message.data));
-            console.log(data);
-          }
-        } catch (error) {
-          console.log(error);
-        }
-      });
-    } catch (error) {
-      console.log(error);
-    }
-
-    subscribedTopics.current.push(pubsubTopic);
-  }, [pubsubTopic]);
+  useEffect(() => {
+    fetchTimeLockServers();
+  }, [fetchTimeLockServers]);
 
   return (
     <>
@@ -270,49 +229,40 @@ const CreateShares: NextPage = () => {
                   <Stack>
                     <TextInput
                       label=""
-                      placeholder="Enter IPFS PubSub Topic"
-                      value={pubsubTopic}
+                      placeholder="Enter Provider URL"
+                      value={providerUrl}
                       onChange={(event) =>
-                        setPubsubTopic(event.currentTarget.value)
+                        setProviderUrl(event.currentTarget.value)
                       }
                     ></TextInput>
 
-                    {pubsubLoading && (
+                    {timeLockServersLoading && (
                       <Stack align="center">
                         <Loader color="grape" />
-                        <Text size="xs">Connecting to IPFS...</Text>
                         <Text size="xs">
-                          Subscribing to PubSub topic: {pubsubTopic}
+                          Connecting to the Time-Lock Provider...
                         </Text>
                       </Stack>
                     )}
 
-                    {!pubsubLoading && (
+                    {!timeLockServersLoading && (
                       <Button
                         component="button"
                         variant="gradient"
                         gradient={{ from: "darkblue", to: "purple" }}
                         size="sm"
                         onClick={() => {
-                          setPubSubLoading(true);
-
-                          handleClickOnGetProvidersButton().then(() => {
-                            const tid = setTimeout(() => {
-                              setPubSubLoading(false);
-                              clearTimeout(tid);
-                            }, 1000);
-                          });
+                          setTimeLockServersLoading(true);
+                          fetchTimeLockServers();
                         }}
                       >
-                        Get Providers
+                        Set Provider
                       </Button>
                     )}
 
                     <Checkbox
                       label={
-                        usingTimeLock
-                          ? `Using ${timeLockProvidersCount} federated time-lock providers`
-                          : "Use federated time-lock providers"
+                        usingTimeLock ? `Using Time-Lock` : "Use Time-Lock"
                       }
                       color="grape"
                       size="xs"
@@ -395,7 +345,8 @@ const CreateShares: NextPage = () => {
                 !minShares ||
                 minShares > totalShares ||
                 !secret ||
-                secret.length > 63
+                secret.length > 63 ||
+                (usingTimeLock && !timeLockOK)
               }
             >
               Next

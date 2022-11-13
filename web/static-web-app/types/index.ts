@@ -5,25 +5,29 @@ export enum PageLinks {
   CreateShares = "create-shares",
 }
 
-export type TimeLockServer = {
-  base_url: string;
-  endpoints: {
-    create: string;
-    read: string;
-    update: string;
-    delete: string;
-    unlock: string;
-    time: string;
-  };
-  auth: {
-    headers: {
-      [key: string]: string;
-    };
-    body: {
-      [key: string]: string;
-    };
-  };
-};
+export interface TimeLockServer {
+  base_url?: string;
+  authentication?: TimeLockAuthentication;
+  routes?: TimeLockRoutes;
+}
+
+export interface TimeLockAuthentication {
+  headers?: TimeLockHeaders;
+}
+
+export interface TimeLockHeaders {
+  API_ACCESS_TOKEN?: string;
+}
+
+export interface TimeLockRoutes {
+  CREATE?: string;
+  DELETE?: string;
+  GET_TIME?: string;
+  READ?: string;
+  STATUS?: string;
+  UNLOCK?: string;
+  UPDATE?: string;
+}
 
 export type TimeLockProvider = {
   servers: TimeLockServer[];

@@ -1,5 +1,5 @@
 import routes from "../routes";
-import { ErrorResponse, RoomData } from "../types";
+import { ErrorResponse, RoomData, TimeLockServer } from "../types";
 
 export const getRoomData = async ({
   roomId,
@@ -190,6 +190,58 @@ export const addEncryptedShare = async ({
         response.status === 403
           ? "Forbidden. API Access Token may be invalid."
           : "",
+    } as ErrorResponse;
+  }
+};
+
+export const getTimeLockServers = async ({
+  token,
+  url,
+  setErrorText,
+}: {
+  token: string;
+  url: string;
+  setErrorText?: (errorText: string) => void;
+}) => {
+  const headers = new Headers();
+
+  headers.append("API_ACCESS_TOKEN", token.trim());
+  headers.append("Content-Type", "application/json");
+
+  headers.append(
+    "Access-Control-Request-Headers",
+    Array.from(headers.keys()).join(","),
+  );
+
+  const requestOptions = {
+    method: "GET",
+    headers,
+  };
+
+  const response = await fetch(
+    `${url}${routes.GET_TIME_LOCK_SERVERS}`,
+    requestOptions,
+  );
+
+  try {
+    const data = (await response.json()) as
+      | Partial<ErrorResponse>
+      | TimeLockServer[];
+
+    if (data instanceof Array) {
+      return data;
+    } else if (!data.success && data.message && setErrorText) {
+      setErrorText(data.message);
+      return;
+    }
+
+    return data;
+  } catch (error) {
+    console.error(error);
+    return {
+      success: false,
+      message:
+        response.status === 401 ? "API Access Token may be invalid." : "",
     } as ErrorResponse;
   }
 };
