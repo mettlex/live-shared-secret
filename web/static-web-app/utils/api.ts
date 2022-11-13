@@ -1,5 +1,10 @@
 import routes from "../routes";
-import { ErrorResponse, RoomData, TimeLockServer } from "../types";
+import {
+  ErrorResponse,
+  RoomData,
+  TimeLockServerCreateKeyApiReponse,
+  TimeLockServer,
+} from "../types";
 
 export const getRoomData = async ({
   roomId,
@@ -218,12 +223,14 @@ export const getTimeLockServers = async ({
     headers,
   };
 
-  const response = await fetch(
-    `${url}${routes.GET_TIME_LOCK_SERVERS}`,
-    requestOptions,
-  );
+  let response;
 
   try {
+    response = await fetch(
+      `${url}${routes.GET_TIME_LOCK_SERVERS}`,
+      requestOptions,
+    );
+
     const data = (await response.json()) as
       | Partial<ErrorResponse>
       | TimeLockServer[];
@@ -238,10 +245,15 @@ export const getTimeLockServers = async ({
     return data;
   } catch (error) {
     console.error(error);
+
+    if (setErrorText) {
+      setErrorText((error as any)?.message || error);
+    }
+
     return {
       success: false,
       message:
-        response.status === 401 ? "API Access Token may be invalid." : "",
+        response?.status === 401 ? "API Access Token may be invalid." : "",
     } as ErrorResponse;
   }
 };
@@ -262,7 +274,62 @@ export const createTimeLockKey = async ({
   encryptedPartialData: string;
   timeLockDuration: number;
   setErrorText: (errorText: string) => void;
-}): Promise<string[] | void> => {
-  // TODO: implement the API later
-  return ["test uuid 1", "test uuid 2"];
+}): Promise<
+  {
+    server?: TimeLockServer;
+    uuid?: string;
+  }[]
+> => {
+  const results = await Promise.all(
+    timeLockServers.map(async (server) => {
+      const { routes, base_url, authentication } = server;
+
+      if (!routes || !base_url) {
+        return undefined;
+      }
+
+      const { CREATE } = routes;
+
+      const createUrl = `${base_url}${CREATE}`;
+
+      const baseHeaders = {
+        "Content-Type": "application/json",
+      };
+
+      try {
+        const response = await fetch(createUrl, {
+          method: "POST",
+          headers: authentication?.headers
+            ? {
+                ...authentication.headers,
+                ...baseHeaders,
+              }
+            : baseHeaders,
+          body: JSON.stringify({
+            ...(authentication?.body ? authentication.body : {}),
+            admin_password: adminPassword,
+            recovery_password: recoveryPassword,
+            iv,
+            encrypted_partial_data: encryptedPartialData,
+            lock_duration_seconds: timeLockDuration,
+          }),
+        });
+
+        return {
+          server,
+          response:
+            (await response.json()) as TimeLockServerCreateKeyApiReponse,
+        };
+      } catch (error) {
+        console.error(error);
+        setErrorText && setErrorText((error as any).message || error);
+        return undefined;
+      }
+    }),
+  );
+
+  return results.map((r) => ({
+    uuid: r?.response?.key?.uuid,
+    server: r?.server,
+  }));
 };

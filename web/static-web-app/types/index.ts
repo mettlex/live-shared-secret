@@ -12,12 +12,23 @@ export interface TimeLockServer {
 }
 
 export interface TimeLockAuthentication {
-  headers?: TimeLockHeaders;
+  headers?: TimeLockAuthHeaders;
+  body: TimeLockAuthBody;
 }
 
-export interface TimeLockHeaders {
-  API_ACCESS_TOKEN?: string;
-}
+export type TimeLockAuthHeaders = Record<string, string>;
+
+export type TimeLockAuthBody = Record<string, string>;
+
+export type TimeLockServerCreateKeyApiReponse = {
+  success?: boolean;
+  message?: string;
+  key?: {
+    uuid?: string;
+    unlock_at?: null;
+    delete_at?: string;
+  };
+};
 
 export interface TimeLockRoutes {
   CREATE?: string;

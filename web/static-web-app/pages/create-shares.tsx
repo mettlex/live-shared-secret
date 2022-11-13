@@ -6,7 +6,6 @@ import {
   Textarea,
   NumberInput,
   PasswordInput,
-  Checkbox,
   Text,
   Group,
   Select,
@@ -14,6 +13,7 @@ import {
   Modal,
   List,
   Card,
+  LoadingOverlay,
 } from "@mantine/core";
 import {
   IconClockPause,
@@ -23,7 +23,7 @@ import {
 } from "@tabler/icons";
 import type { NextPage } from "next";
 import Head from "next/head";
-import { useState, useEffect, useCallback, useRef, createRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { TimeLockServer } from "../types";
 import { createTimeLockKey, getTimeLockServers } from "../utils/api";
 import { aesGcmEncrypt } from "../utils/cryptography";
@@ -78,12 +78,16 @@ const CreateShares: NextPage = () => {
   const [secondSecretPart, setSecondSecretPart] = useState("");
   const [timeLockIv, setTimeLockIv] = useState("");
   const [timeLockUuids, setTimeLockUuids] = useState<string[]>([]);
+  const [encryptedTimeLockAdminInfo, setEncryptedTimeLockAdminInfo] =
+    useState("");
 
   const [passwords, setPasswords] = useState<{ text: string; done: boolean }[]>(
     [],
   );
 
   const [encryptedShares, setEncryptedShares] = useState<string[]>([]);
+
+  const tlServerListAPICalled = useRef(false);
 
   const sendKeyToTimeServers = useCallback(async () => {
     if (!firstSecretPart || !usingTimeLock || !timeLockOK) {
@@ -108,19 +112,27 @@ const CreateShares: NextPage = () => {
 
     encryptedPartialData = encryptedPartialData.slice(24);
 
-    const uuids = await createTimeLockKey({
+    const results = await createTimeLockKey({
       timeLockServers,
       adminPassword,
       recoveryPassword: secondPart,
       iv,
       encryptedPartialData,
-      timeLockDuration: 0,
+      timeLockDuration: 1,
       setErrorText,
     });
 
-    if (uuids instanceof Array) {
+    if (results instanceof Array) {
       setSecret(secondPart);
-      setTimeLockUuids(uuids);
+
+      setTimeLockUuids(results.map((r) => r.uuid || ""));
+
+      const cipherText = await aesGcmEncrypt({
+        plaintext: JSON.stringify({ results }),
+        password: adminPassword,
+      });
+
+      setEncryptedTimeLockAdminInfo(cipherText);
     }
   }, [
     adminPassword,
@@ -241,9 +253,11 @@ const CreateShares: NextPage = () => {
   }, [allDone, attemptToEncrypt]);
 
   const fetchTimeLockServers = useCallback(async () => {
-    if (!timeLockServersLoading) {
+    if (!timeLockServersLoading || tlServerListAPICalled.current) {
       return;
     }
+
+    tlServerListAPICalled.current = true;
 
     const servers = await getTimeLockServers({
       url: providerUrl,
@@ -350,6 +364,8 @@ const CreateShares: NextPage = () => {
                   } catch (error) {
                     setErrorText((error as any)?.message || error || "");
                   }
+
+                  setCreatingKey(false);
                 }
               }
             }}
@@ -469,6 +485,7 @@ const CreateShares: NextPage = () => {
                         size="sm"
                         onClick={async () => {
                           setTimeLockServersLoading(true);
+                          tlServerListAPICalled.current = false;
                           await fetchTimeLockServers();
                           setUsedProviderUrl(providerUrl);
                         }}
@@ -661,6 +678,7 @@ const CreateShares: NextPage = () => {
             <Button
               type="submit"
               style={{ width: "85vw", maxWidth: "400px" }}
+              mb="xl"
               variant="gradient"
               gradient={{ from: "darkblue", to: "purple" }}
               size="md"
@@ -740,8 +758,27 @@ const CreateShares: NextPage = () => {
           </>
         )}
 
+        <LoadingOverlay visible={creatingKey} overlayBlur={1} />
+
         {allDone && (
           <>
+            {timeLockUuids.filter((x) => x).length > 0 && (
+              <Textarea
+                minRows={7}
+                style={{ width: "85vw", maxWidth: "400px" }}
+                styles={{ input: { maxHeight: "20vh", height: "200px" } }}
+                label={`Time-Lock Admin Information`}
+                mb="lg"
+                value={encryptedTimeLockAdminInfo}
+                onFocus={(event) => event.currentTarget.select()}
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
+                required
+              />
+            )}
+
             {new Array(totalShares).fill(0).map((_, i) => (
               <Textarea
                 key={i}
