@@ -65,6 +65,7 @@ const AdminControlPanel = () => {
     });
 
     if (!status) {
+      setErrorText("Unable to get the key status!");
       return;
     }
 
