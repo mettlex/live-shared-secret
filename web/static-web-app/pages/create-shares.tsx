@@ -21,7 +21,7 @@ import {
 } from "@tabler/icons";
 import type { NextPage } from "next";
 import Head from "next/head";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, createRef } from "react";
 import { TimeLockServer } from "../types";
 import { getTimeLockServers } from "../utils/api";
 import { aesGcmEncrypt } from "../utils/cryptography";
@@ -37,16 +37,26 @@ const CreateShares: NextPage = () => {
   const [allDone, setAllDone] = useState(false);
   const [refreshed, refresh] = useState("");
   const [durationFormat, setDurationFormat] = useState("days");
+  const [timeLockDurationNumber, setTimeLockDurationNumber] =
+    useState<number>();
   const [usingTimeLock, setUsingTimeLock] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminPasswordOK, setAdminPasswordOK] = useState(false);
   const [timeLockOK, setTimeLockOK] = useState(false);
+  const [timeLockAccordingValue, setTimeLockAccordingValue] = useState<
+    string | null
+  >(null);
   const [timeLockProvidersCount, setTimeLockProvidersCount] = useState(0);
-  const [providerUrl, setProviderUrl] = useState(
-    "https://timelock.onrender.com",
+  const defaultServerListProvider = "https://timelock.onrender.com";
+  const [providerUrl, setProviderUrl] = useState(defaultServerListProvider);
+  const [usedProviderUrl, setUsedProviderUrl] = useState(
+    defaultServerListProvider,
   );
   const [timeLockServers, setTimeLockServers] = useState<TimeLockServer[]>([]);
   const [timeLockServersLoading, setTimeLockServersLoading] = useState(true);
+  const [creatingKey, setCreatingKey] = useState(false);
+
+  const [adminPasswordError, setAdminPasswordError] = useState("");
 
   const [passwords, setPasswords] = useState<{ text: string; done: boolean }[]>(
     [],
@@ -54,9 +64,19 @@ const CreateShares: NextPage = () => {
 
   const [encryptedShares, setEncryptedShares] = useState<string[]>([]);
 
+  const adminPasswordInputRef = createRef<HTMLInputElement>();
+
   useEffect(() => {
-    console.log(timeLockServers);
-  }, [timeLockServers]);
+    if (timeLockAccordingValue === "timelock") {
+      if (adminPasswordInputRef.current) {
+        adminPasswordInputRef.current.scrollIntoView();
+      }
+
+      setUsingTimeLock(true);
+    } else {
+      setUsingTimeLock(false);
+    }
+  }, [adminPasswordInputRef, timeLockAccordingValue]);
 
   const setRandomSecret = useCallback(() => {
     const randomSecret = encodeBase64(
@@ -124,6 +144,64 @@ const CreateShares: NextPage = () => {
     fetchTimeLockServers();
   }, [fetchTimeLockServers]);
 
+  useEffect(() => {
+    if (!adminPassword) {
+      return;
+    }
+
+    if (adminPassword.length < 10) {
+      setAdminPasswordError("Password must be more than 9 characters");
+
+      return;
+    }
+
+    if (!/[a-z]/.test(adminPassword)) {
+      setAdminPasswordError("Must include at least one small letter");
+
+      return;
+    }
+
+    if (!/[A-Z]/.test(adminPassword)) {
+      setAdminPasswordError("Must include at least one capital letter");
+
+      return;
+    }
+
+    if (!/[0-9]/.test(adminPassword)) {
+      setAdminPasswordError("Must include at least one number");
+
+      return;
+    }
+
+    if (!/\W/.test(adminPassword)) {
+      setAdminPasswordError("Must include at least one special symbol");
+
+      return;
+    }
+
+    setAdminPasswordError("");
+    setAdminPasswordOK(true);
+  }, [adminPassword]);
+
+  useEffect(() => {
+    if (
+      typeof timeLockDurationNumber === "number" &&
+      timeLockDurationNumber > 0 &&
+      durationFormat &&
+      adminPasswordOK &&
+      timeLockServers.length > 0
+    ) {
+      setTimeLockOK(true);
+    } else {
+      setTimeLockOK(false);
+    }
+  }, [
+    adminPasswordOK,
+    durationFormat,
+    timeLockDurationNumber,
+    timeLockServers.length,
+  ]);
+
   return (
     <>
       <Head>
@@ -140,7 +218,16 @@ const CreateShares: NextPage = () => {
             onSubmit={async (event) => {
               event.preventDefault();
 
-              setFirstStepDone(true);
+              if (
+                (!usingTimeLock && !timeLockAccordingValue) ||
+                (usingTimeLock && timeLockOK)
+              ) {
+                setFirstStepDone(true);
+
+                if (usingTimeLock) {
+                  setCreatingKey(true);
+                }
+              }
             }}
           >
             <NumberInput
@@ -217,8 +304,10 @@ const CreateShares: NextPage = () => {
               }}
               variant="separated"
               mb="60px"
+              value={timeLockAccordingValue}
+              onChange={setTimeLockAccordingValue}
             >
-              <Accordion.Item value="share">
+              <Accordion.Item value="timelock">
                 <Accordion.Control
                   icon={<IconClockPause size={20} color="purple" />}
                 >
@@ -227,21 +316,24 @@ const CreateShares: NextPage = () => {
 
                 <Accordion.Panel>
                   <Stack>
+                    <Text size="xs" color="dimmed">
+                      Close this panel to continue without time-lock.
+                    </Text>
+
                     <TextInput
-                      label=""
+                      label="Server List Provider"
                       placeholder="Enter Provider URL"
                       value={providerUrl}
                       onChange={(event) =>
                         setProviderUrl(event.currentTarget.value)
                       }
+                      required
                     ></TextInput>
 
                     {timeLockServersLoading && (
                       <Stack align="center">
                         <Loader color="grape" />
-                        <Text size="xs">
-                          Connecting to the Time-Lock Provider...
-                        </Text>
+                        <Text size="xs">Fetching the providers...</Text>
                       </Stack>
                     )}
 
@@ -251,28 +343,20 @@ const CreateShares: NextPage = () => {
                         variant="gradient"
                         gradient={{ from: "darkblue", to: "purple" }}
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
                           setTimeLockServersLoading(true);
-                          fetchTimeLockServers();
+                          await fetchTimeLockServers();
+                          setUsedProviderUrl(providerUrl);
                         }}
+                        disabled={providerUrl === usedProviderUrl}
                       >
-                        Set Provider
+                        {providerUrl === usedProviderUrl
+                          ? `Found ${timeLockServers.length} Time-Lock Server${
+                              timeLockServers.length > 1 ? "s" : ""
+                            }`
+                          : `Get New Servers`}
                       </Button>
                     )}
-
-                    <Checkbox
-                      label={
-                        usingTimeLock ? `Using Time-Lock` : "Use Time-Lock"
-                      }
-                      color="grape"
-                      size="xs"
-                      mt="md"
-                      checked={usingTimeLock}
-                      onChange={(event) =>
-                        setUsingTimeLock(event.currentTarget.checked)
-                      }
-                      // disabled={timeLockProvidersCount < 3}
-                    />
 
                     {usingTimeLock && (
                       <Stack mt="lg">
@@ -284,6 +368,12 @@ const CreateShares: NextPage = () => {
                             size="xs"
                             type="number"
                             required
+                            autoComplete="off"
+                            autoCorrect="off"
+                            value={timeLockDurationNumber}
+                            onChange={(value) =>
+                              setTimeLockDurationNumber(value || 0)
+                            }
                           ></NumberInput>
 
                           <Select
@@ -326,6 +416,8 @@ const CreateShares: NextPage = () => {
                           onChange={(event) => {
                             setAdminPassword(event.currentTarget.value.trim());
                           }}
+                          ref={adminPasswordInputRef}
+                          error={adminPasswordError}
                         />
                       </Stack>
                     )}
@@ -346,7 +438,8 @@ const CreateShares: NextPage = () => {
                 minShares > totalShares ||
                 !secret ||
                 secret.length > 63 ||
-                (usingTimeLock && !timeLockOK)
+                (usingTimeLock && !timeLockOK) ||
+                (!!timeLockAccordingValue && !timeLockOK)
               }
             >
               Next
