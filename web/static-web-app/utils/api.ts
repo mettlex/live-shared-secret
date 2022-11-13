@@ -264,7 +264,7 @@ export const createTimeLockKey = async ({
   recoveryPassword,
   iv,
   encryptedPartialData,
-  timeLockDuration,
+  lockDurationInSeconds,
   setErrorText,
 }: {
   timeLockServers: TimeLockServer[];
@@ -272,7 +272,7 @@ export const createTimeLockKey = async ({
   recoveryPassword: string;
   iv: string;
   encryptedPartialData: string;
-  timeLockDuration: number;
+  lockDurationInSeconds: number;
   setErrorText: (errorText: string) => void;
 }): Promise<
   {
@@ -311,7 +311,7 @@ export const createTimeLockKey = async ({
             recovery_password: recoveryPassword,
             iv,
             encrypted_partial_data: encryptedPartialData,
-            lock_duration_seconds: timeLockDuration,
+            lock_duration_seconds: lockDurationInSeconds,
           }),
         });
 

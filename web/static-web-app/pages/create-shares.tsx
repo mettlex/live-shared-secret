@@ -24,18 +24,12 @@ import {
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { TimeLockServer } from "../types";
+import { DurationFormat, TimeLockServer } from "../types";
 import { createTimeLockKey, getTimeLockServers } from "../utils/api";
 import { aesGcmEncrypt } from "../utils/cryptography";
 import { encode as encodeBase64 } from "../utils/encoding/base64";
 import { createShares } from "../utils/sss-wasm";
-
-enum DurationFormat {
-  MINUTES = "minutes",
-  DAYS = "days",
-  MONTHS = "months",
-  YEARS = "years",
-}
+import convertDurationToSeconds from "../utils/time/duration-to-seconds";
 
 const CreateShares: NextPage = () => {
   const [totalShares, setTotalShares] = useState(3);
@@ -45,9 +39,8 @@ const CreateShares: NextPage = () => {
   const [firstStepDone, setFirstStepDone] = useState(false);
   const [allDone, setAllDone] = useState(false);
   const [refreshed, refresh] = useState("");
-  const [durationFormat, setDurationFormat] = useState<DurationFormat>(
-    DurationFormat.DAYS,
-  );
+  const [timeLockDurationFormat, setTimeLockDurationFormat] =
+    useState<DurationFormat>(DurationFormat.DAYS);
   const [timeLockDurationNumber, setTimeLockDurationNumber] =
     useState<number>();
   const [usingTimeLock, setUsingTimeLock] = useState(false);
@@ -77,7 +70,6 @@ const CreateShares: NextPage = () => {
   const [firstSecretPart, setFirstSecretPart] = useState("");
   const [secondSecretPart, setSecondSecretPart] = useState("");
   const [timeLockIv, setTimeLockIv] = useState("");
-  const [timeLockUuids, setTimeLockUuids] = useState<string[]>([]);
   const [encryptedTimeLockAdminInfo, setEncryptedTimeLockAdminInfo] =
     useState("");
 
@@ -86,6 +78,9 @@ const CreateShares: NextPage = () => {
   );
 
   const [encryptedShares, setEncryptedShares] = useState<string[]>([]);
+
+  const [timeLockCreateKeyResults, setTimeLockCreateKeyResults] =
+    useState<Awaited<ReturnType<typeof createTimeLockKey>>>();
 
   const tlServerListAPICalled = useRef(false);
 
@@ -101,34 +96,41 @@ const CreateShares: NextPage = () => {
     const firstPart = firstSecretPart;
     const secondPart = secondSecretPart;
 
-    const iv = "<NOT SENT>";
-
     let encryptedPartialData = await aesGcmEncrypt({
       plaintext: firstPart,
       password: secondPart,
     });
 
-    setTimeLockIv(encryptedPartialData.slice(0, 24));
+    const tlHiddenIv = encryptedPartialData.slice(0, 24);
+
+    setTimeLockIv(tlHiddenIv);
 
     encryptedPartialData = encryptedPartialData.slice(24);
+
+    if (!timeLockDurationNumber) {
+      throw new Error(`Duration in ${timeLockDurationFormat} is not set`);
+    }
 
     const results = await createTimeLockKey({
       timeLockServers,
       adminPassword,
       recoveryPassword: secondPart,
-      iv,
+      iv: "<NOT SENT>",
       encryptedPartialData,
-      timeLockDuration: 1,
+      lockDurationInSeconds: convertDurationToSeconds({
+        amount: timeLockDurationNumber,
+        format: timeLockDurationFormat,
+      }),
       setErrorText,
     });
 
     if (results instanceof Array) {
       setSecret(secondPart);
 
-      setTimeLockUuids(results.map((r) => r.uuid || ""));
+      setTimeLockCreateKeyResults(results);
 
       const cipherText = await aesGcmEncrypt({
-        plaintext: JSON.stringify({ results }),
+        plaintext: JSON.stringify({ results, iv: tlHiddenIv }),
         password: adminPassword,
       });
 
@@ -138,6 +140,8 @@ const CreateShares: NextPage = () => {
     adminPassword,
     firstSecretPart,
     secondSecretPart,
+    timeLockDurationFormat,
+    timeLockDurationNumber,
     timeLockOK,
     timeLockServers,
     usingTimeLock,
@@ -216,15 +220,21 @@ const CreateShares: NextPage = () => {
       ),
     );
 
-    if (usingTimeLock && timeLockOK && timeLockUuids.length > 0) {
+    if (
+      usingTimeLock &&
+      timeLockOK &&
+      timeLockCreateKeyResults &&
+      timeLockCreateKeyResults.length > 0
+    ) {
       encShares = encShares.map((share) => {
         const prefix = "timelocked_";
 
         const json = JSON.stringify({
           share,
-          uuids: timeLockUuids,
-          iv: timeLockIv,
-          timeLockServers,
+          timeLock: {
+            results: timeLockCreateKeyResults,
+            iv: timeLockIv,
+          },
         });
 
         return `${prefix}${encodeBase64(json)}`;
@@ -236,10 +246,9 @@ const CreateShares: NextPage = () => {
     minShares,
     passwords,
     secret,
+    timeLockCreateKeyResults,
     timeLockIv,
     timeLockOK,
-    timeLockServers,
-    timeLockUuids,
     totalShares,
     usingTimeLock,
   ]);
@@ -319,7 +328,7 @@ const CreateShares: NextPage = () => {
     if (
       typeof timeLockDurationNumber === "number" &&
       timeLockDurationNumber > 0 &&
-      durationFormat &&
+      timeLockDurationFormat &&
       adminPasswordOK &&
       timeLockServers.length > 0
     ) {
@@ -329,7 +338,7 @@ const CreateShares: NextPage = () => {
     }
   }, [
     adminPasswordOK,
-    durationFormat,
+    timeLockDurationFormat,
     timeLockDurationNumber,
     timeLockServers.length,
   ]);
@@ -615,7 +624,7 @@ const CreateShares: NextPage = () => {
 
                       <Group position="center" grow>
                         <NumberInput
-                          placeholder={`Enter ${durationFormat}`}
+                          placeholder={`Enter ${timeLockDurationFormat}`}
                           size="xs"
                           type="number"
                           required
@@ -634,11 +643,13 @@ const CreateShares: NextPage = () => {
                             { value: DurationFormat.YEARS, label: "Years" },
                             { value: DurationFormat.MONTHS, label: "Months" },
                             { value: DurationFormat.DAYS, label: "Days" },
+                            { value: DurationFormat.HOURS, label: "Hours" },
                             { value: DurationFormat.MINUTES, label: "Minutes" },
                           ]}
-                          value={durationFormat}
+                          value={timeLockDurationFormat}
                           onChange={(value) =>
-                            value && setDurationFormat(value as DurationFormat)
+                            value &&
+                            setTimeLockDurationFormat(value as DurationFormat)
                           }
                           size="xs"
                           styles={{
@@ -762,22 +773,24 @@ const CreateShares: NextPage = () => {
 
         {allDone && (
           <>
-            {timeLockUuids.filter((x) => x).length > 0 && (
-              <Textarea
-                minRows={7}
-                style={{ width: "85vw", maxWidth: "400px" }}
-                styles={{ input: { maxHeight: "20vh", height: "200px" } }}
-                label={`Time-Lock Admin Information`}
-                mb="lg"
-                value={encryptedTimeLockAdminInfo}
-                onFocus={(event) => event.currentTarget.select()}
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck="false"
-                required
-              />
-            )}
+            {timeLockCreateKeyResults &&
+              timeLockCreateKeyResults.filter((x) => x).length > 0 && (
+                <Textarea
+                  minRows={7}
+                  style={{ width: "85vw", maxWidth: "400px" }}
+                  styles={{ input: { maxHeight: "20vh", height: "200px" } }}
+                  label={`Time-Lock Admin Information`}
+                  mb="lg"
+                  value={encryptedTimeLockAdminInfo}
+                  onFocus={(event) => event.currentTarget.select()}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  onChange={() => {}}
+                  required
+                />
+              )}
 
             {new Array(totalShares).fill(0).map((_, i) => (
               <Textarea
@@ -793,6 +806,7 @@ const CreateShares: NextPage = () => {
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck="false"
+                onChange={() => {}}
               />
             ))}
           </>

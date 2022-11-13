@@ -5,6 +5,14 @@ export enum PageLinks {
   CreateShares = "create-shares",
 }
 
+export enum DurationFormat {
+  MINUTES = "minutes",
+  HOURS = "hours",
+  DAYS = "days",
+  MONTHS = "months",
+  YEARS = "years",
+}
+
 export interface TimeLockServer {
   base_url?: string;
   authentication?: TimeLockAuthentication;
