@@ -352,7 +352,7 @@ export const getKeyStatus = async ({
 
     if (!routes) {
       setErrorText("Invaid Time-Lock Server Info");
-      return undefined;
+      continue;
     }
 
     const { STATUS } = routes;
@@ -392,10 +392,14 @@ export const getKeyStatus = async ({
           }. ${statusApiResult.message}`,
         );
 
-        return undefined;
+        continue;
       }
 
-      return statusApiResult as TimeLockServerSuccessStatusResponse;
+      if ((statusApiResult as TimeLockServerSuccessStatusResponse).key) {
+        return statusApiResult as TimeLockServerSuccessStatusResponse;
+      } else {
+        return undefined;
+      }
     } catch (error) {
       console.error(error);
       setErrorText((error as any)?.message || error);
