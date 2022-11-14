@@ -13,9 +13,10 @@ import {
   TimeLockServerInfoForShare,
   TimeLockServerSuccessStatusResponse,
 } from "../../types";
-import { getKeyStatus } from "../../utils/api";
+import { deleteKey, getKeyStatus } from "../../utils/api";
 import { aesGcmDecryptToUint8 } from "../../utils/cryptography";
 import { SelectedMenu } from "../../pages/time-lock";
+import { useRouter } from "next/router";
 
 type AdminControlPanelProps = {
   setSelected: (menu?: SelectedMenu) => void;
@@ -39,6 +40,8 @@ const AdminControlPanel = ({ setSelected }: AdminControlPanelProps) => {
 
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const ivRef = useRef<string>();
+
+  const router = useRouter();
 
   const attemptToDecrypt = useCallback(async () => {
     try {
@@ -137,10 +140,38 @@ const AdminControlPanel = ({ setSelected }: AdminControlPanelProps) => {
     }
   }, [unlockAt, refreshCount]);
 
-  const deleteKey = useCallback(async () => {
-    // todo:
-    alert("not done. i'll implement this later :)");
-  }, []);
+  const attemptDeleteKey = useCallback(async () => {
+    if (!serverResults) {
+      return;
+    }
+
+    try {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = undefined;
+      }
+    } catch (_error) {
+      // no op
+    }
+
+    const responses = await deleteKey({
+      adminPassword,
+      results: serverResults,
+      setErrorText,
+    });
+
+    const count = responses.reduce((acc, curr) => {
+      if (curr.success) {
+        return acc + 1;
+      } else {
+        return acc;
+      }
+    }, 0);
+
+    alert(
+      `Successfully removed key from ${count} server${count > 1 ? "s" : ""}`,
+    );
+  }, [adminPassword, serverResults]);
 
   useEffect(() => {
     if (!intervalRef.current) {
@@ -287,9 +318,9 @@ const AdminControlPanel = ({ setSelected }: AdminControlPanelProps) => {
             const answer = confirm("Do you want to delete the key forever?");
 
             if (answer === true) {
-              await deleteKey();
+              await attemptDeleteKey();
 
-              // router.push("/");
+              router.push("/");
             }
           }}
         >

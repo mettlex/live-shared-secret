@@ -352,7 +352,7 @@ export const getKeyStatus = async ({
 
     if (!server || !uuid) {
       setErrorText("Invaid Time-Lock Server Info");
-      return;
+      continue;
     }
 
     const { base_url, routes, authentication } = server;
@@ -394,9 +394,9 @@ export const getKeyStatus = async ({
         (statusApiResult as TimeLockServerErrorResponse)?.statusCode !== 200
       ) {
         setErrorText(
-          `Error ${
-            (statusApiResult as TimeLockServerErrorResponse).statusCode
-          }. ${statusApiResult.message}`,
+          `${(statusApiResult as TimeLockServerErrorResponse).statusCode}. ${
+            statusApiResult.message
+          }`,
         );
 
         continue;
@@ -412,4 +412,85 @@ export const getKeyStatus = async ({
       setErrorText((error as any)?.message || error);
     }
   }
+};
+
+export const deleteKey = async ({
+  adminPassword,
+  results,
+  setErrorText,
+}: {
+  adminPassword: string;
+  results: TimeLockServerCreateKeyResult[];
+  setErrorText: (errorText: string) => void;
+}) => {
+  const responses = [];
+
+  for (const createApiResult of results) {
+    const { server, uuid } = createApiResult;
+
+    if (!server || !uuid) {
+      setErrorText("Invaid Time-Lock Server Info");
+      continue;
+    }
+
+    const { base_url, routes, authentication } = server;
+
+    if (!routes) {
+      setErrorText("Invaid Time-Lock Server Info");
+      continue;
+    }
+
+    const { DELETE } = routes;
+
+    const deleteUrl = `${base_url}${DELETE}`;
+
+    const baseHeaders = {
+      "Content-Type": "application/json",
+    };
+
+    try {
+      const response = await fetch(deleteUrl, {
+        method: "POST",
+        headers: authentication?.headers
+          ? {
+              ...authentication.headers,
+              ...baseHeaders,
+            }
+          : baseHeaders,
+        body: JSON.stringify({
+          ...(authentication?.body ? authentication.body : {}),
+          uuid,
+          admin_password: adminPassword,
+        }),
+      });
+
+      const deleteApiResult = await response.json();
+
+      if (
+        typeof (deleteApiResult as TimeLockServerErrorResponse)?.statusCode ===
+          "number" &&
+        (deleteApiResult as TimeLockServerErrorResponse)?.statusCode !== 200
+      ) {
+        setErrorText(
+          `${(deleteApiResult as TimeLockServerErrorResponse).statusCode}. ${
+            deleteApiResult.message
+          }`,
+        );
+
+        continue;
+      }
+
+      if (deleteApiResult && deleteApiResult.success === true) {
+        responses.push(deleteApiResult as { success: true });
+      } else {
+        responses.push({ success: false });
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorText((error as any)?.message || error);
+      responses.push({ success: false });
+    }
+  }
+
+  return responses;
 };
