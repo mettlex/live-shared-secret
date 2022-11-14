@@ -236,7 +236,7 @@ const AdminControlPanel = ({ setSelected }: AdminControlPanelProps) => {
         }
         style={{ width: "85vw", maxWidth: "400px" }}
         placeholder="Enter your password to decrypt your share"
-        label="Your Password"
+        label="Your Admin Password"
         required
         value={adminPassword}
         onChange={(event) => {
