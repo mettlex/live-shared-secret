@@ -1,5 +1,11 @@
 import { Button, Modal, PasswordInput, Text, Textarea } from "@mantine/core";
-import { IconLock, IconLockOpen, IconTrash } from "@tabler/icons";
+import {
+  IconArrowBack,
+  IconLock,
+  IconLockOpen,
+  IconRefresh,
+  IconTrash,
+} from "@tabler/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseISO, differenceInSeconds } from "date-fns";
 import {
@@ -9,25 +15,30 @@ import {
 } from "../../types";
 import { getKeyStatus } from "../../utils/api";
 import { aesGcmDecryptToUint8 } from "../../utils/cryptography";
-import { useRouter } from "next/router";
+import { SelectedMenu } from "../../pages/time-lock";
 
-const AdminControlPanel = () => {
+type AdminControlPanelProps = {
+  setSelected: (menu?: SelectedMenu) => void;
+};
+
+const AdminControlPanel = ({ setSelected }: AdminControlPanelProps) => {
   const [adminPassword, setAdminPassword] = useState("");
   const [ciphertext, setCiphertext] = useState("");
+  const [refreshButtonDisabled, setRefreshButtonDisabled] = useState(false);
   const [decrypted, setDecrypted] = useState(false);
   const [locked, setLocked] = useState(true);
   const [errorText, setErrorText] = useState("");
-  const [keyStatus, setKeyStatus] =
-    useState<TimeLockServerSuccessStatusResponse>();
+  const [keyStatus, setKeyStatus] = useState<
+    TimeLockServerSuccessStatusResponse | undefined
+  >();
   const [serverResults, setServerResults] =
     useState<TimeLockServerCreateKeyResult[]>();
   const [unlockAt, setUnlockAt] = useState("");
   const [deleteAt, setDeleteAt] = useState("");
+  const [refreshCount, setRefreshCount] = useState(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const ivRef = useRef<string>();
-
-  const router = useRouter();
 
   const attemptToDecrypt = useCallback(async () => {
     try {
@@ -96,10 +107,14 @@ const AdminControlPanel = () => {
 
     if (serverResults) {
       intervalRef.current = setInterval(async () => {
-        await fetchStatus().catch((_e) => {
+        await fetchStatus().catch((e) => {
           clearInterval(intervalRef.current);
+          intervalRef.current = undefined;
+          setErrorText(e.message || e);
         });
-      }, 2000);
+
+        setRefreshCount(refreshCount + 1);
+      }, 3000);
     }
 
     const interval = intervalRef.current;
@@ -107,27 +122,55 @@ const AdminControlPanel = () => {
     return () => {
       if (interval) {
         clearInterval(interval);
+        intervalRef.current = undefined;
       }
     };
-  }, [fetchStatus, intervalRef, serverResults]);
+  }, [fetchStatus, intervalRef, refreshCount, serverResults]);
 
   useEffect(() => {
-    if (!unlockAt) {
+    if (!unlockAt || !refreshCount) {
       return;
     }
 
     if (differenceInSeconds(new Date(), parseISO(unlockAt)) > 0) {
       setLocked(false);
     }
-  }, [unlockAt]);
+  }, [unlockAt, refreshCount]);
 
   const deleteKey = useCallback(async () => {
     // todo:
     alert("not done. i'll implement this later :)");
   }, []);
 
+  useEffect(() => {
+    if (!intervalRef.current) {
+      setKeyStatus(undefined);
+    }
+  }, []);
+
   return (
     <>
+      <Button
+        component="button"
+        style={{ width: "85vw", maxWidth: "400px" }}
+        mb="xl"
+        variant="light"
+        color="blue"
+        size="md"
+        leftIcon={<IconArrowBack />}
+        styles={{
+          leftIcon: {
+            position: "absolute",
+            left: "10%",
+          },
+        }}
+        onClick={() => {
+          setSelected(undefined);
+        }}
+      >
+        Back
+      </Button>
+
       <Textarea
         minRows={4}
         styles={{
@@ -170,14 +213,45 @@ const AdminControlPanel = () => {
         }}
       />
 
+      <Button
+        component="button"
+        style={{ width: "85vw", maxWidth: "400px" }}
+        mb={0}
+        variant="light"
+        color="cyan"
+        size="md"
+        leftIcon={<IconRefresh />}
+        styles={{
+          leftIcon: {
+            position: "absolute",
+            left: "10%",
+          },
+        }}
+        onClick={async () => {
+          setRefreshButtonDisabled(true);
+          await fetchStatus().catch((e) => {
+            setErrorText(e.message || e);
+          });
+          setRefreshButtonDisabled(false);
+          setRefreshCount(refreshCount + 1);
+        }}
+        disabled={!serverResults || refreshButtonDisabled}
+      >
+        Refresh
+      </Button>
+
+      <Text size="xs" color="dimmed" hidden={refreshCount < 2}>
+        Refreshed {refreshCount} times
+      </Text>
+
       {keyStatus && (
         <Text size="sm">
           Status:{" "}
           {unlockAt && locked
-            ? "Unlocking Started"
+            ? "Unlocking Started ⏳️"
             : locked
-            ? "Locked"
-            : "Unlocked"}
+            ? "Locked 🔒️"
+            : "Unlocked 🔓️"}
         </Text>
       )}
 
@@ -198,10 +272,10 @@ const AdminControlPanel = () => {
         <Button
           mt="xl"
           component="button"
-          style={{ width: "80vw", maxWidth: "400px" }}
+          style={{ width: "85vw", maxWidth: "400px" }}
           variant="light"
           color="pink"
-          size="sm"
+          size="md"
           leftIcon={<IconTrash />}
           styles={{
             leftIcon: {

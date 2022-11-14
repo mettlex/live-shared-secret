@@ -94,10 +94,6 @@ const CreateShares: NextPage = () => {
       return;
     }
 
-    if (timeLockServers.length > 2) {
-      throw new Error("Not Implemented Yet");
-    }
-
     const firstPart = firstSecretPart;
     const secondPart = secondSecretPart;
 
@@ -519,17 +515,17 @@ const CreateShares: NextPage = () => {
                     )}
 
                     <Card>
-                      <Card.Section>
+                      <Card.Section p="xs" pb={0}>
                         <Text size="xs">Locking Strategy:</Text>
                       </Card.Section>
-                      <Card.Section>
+                      <Card.Section p="xs">
                         <Stack spacing="xs">
                           <Text size="xs" color="dimmed">
                             You can use one of the two options:
                           </Text>
 
-                          <List type="ordered" size="xs" spacing="xs">
-                            <List.Item>
+                          <List type="ordered" size="xs" spacing={0}>
+                            <List.Item pb={0} mb={0}>
                               <Text size="xs">
                                 {`If you don't use any space in your secret,`}
                               </Text>
@@ -538,12 +534,19 @@ const CreateShares: NextPage = () => {
                                 time-locked
                               </Text>
                             </List.Item>
-                            <List.Item>
+                            <Text
+                              size="xs"
+                              style={{ textAlign: "center" }}
+                              p={0}
+                            >
+                              or
+                            </Text>
+                            <List.Item pt={0} mt={0}>
                               <Text size="xs">
-                                Use a space in your secret to split your secret
+                                Use a space in your secret to time-lock
                               </Text>
                               <Text size="xs">
-                                to time-lock the part left side of the space
+                                the part left side of the space
                               </Text>
                             </List.Item>
                           </List>

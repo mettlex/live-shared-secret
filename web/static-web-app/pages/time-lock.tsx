@@ -6,7 +6,7 @@ import { useState } from "react";
 import AdminControlPanel from "../components/TLAdminControlPanel";
 import TimeLockRecovery from "../components/TLRecovery";
 
-type SelectedMenu = "ADMIN" | "RECOVERY";
+export type SelectedMenu = "ADMIN" | "RECOVERY" | undefined;
 
 const TimeLock: NextPage = () => {
   const [selected, setSelected] = useState<SelectedMenu>();
@@ -16,7 +16,7 @@ const TimeLock: NextPage = () => {
       align="center"
       justify="center"
       style={{
-        height: "70%",
+        height: (!selected && "70%") || "unset",
       }}
       spacing={selected ? "xs" : "xl"}
     >
@@ -28,15 +28,17 @@ const TimeLock: NextPage = () => {
         </title>
       </Head>
 
-      {selected === "ADMIN" && <AdminControlPanel />}
+      {selected === "ADMIN" && <AdminControlPanel setSelected={setSelected} />}
 
-      {selected === "RECOVERY" && <TimeLockRecovery />}
+      {selected === "RECOVERY" && (
+        <TimeLockRecovery setSelected={setSelected} />
+      )}
 
       {!selected && (
         <>
           <Button
             component="button"
-            style={{ width: "80vw", maxWidth: "400px" }}
+            style={{ width: "85vw", maxWidth: "400px" }}
             variant="light"
             color="teal"
             size="md"
@@ -56,7 +58,7 @@ const TimeLock: NextPage = () => {
 
           <Button
             component="button"
-            style={{ width: "80vw", maxWidth: "400px" }}
+            style={{ width: "85vw", maxWidth: "400px" }}
             variant="light"
             color="blue"
             size="md"
@@ -71,7 +73,7 @@ const TimeLock: NextPage = () => {
               setSelected("RECOVERY");
             }}
           >
-            Recovery
+            Recovery Panel
           </Button>
         </>
       )}

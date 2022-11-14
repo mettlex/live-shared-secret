@@ -29,13 +29,7 @@ import {
   useState,
 } from "react";
 import { GlobalStateContext } from "../../store/global";
-import {
-  RoomData,
-  TimeLockServer,
-  TimeLockServerCreateKeyResult,
-  TimeLockServerInfoForShare,
-  TimeLockServerInfoWithShare,
-} from "../../types";
+import { RoomData, TimeLockServerInfoWithShare } from "../../types";
 import { addEncryptedShare, getRoomData } from "../../utils/api";
 import {
   aesGcmDecryptToUint8,

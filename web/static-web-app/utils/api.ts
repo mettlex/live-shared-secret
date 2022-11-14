@@ -280,51 +280,58 @@ export const createTimeLockKey = async ({
   setErrorText: (errorText: string) => void;
 }): Promise<TimeLockServerCreateKeyResult[]> => {
   const results = await Promise.all(
-    timeLockServers.map(async (server) => {
-      const { routes, base_url, authentication } = server;
+    timeLockServers
+      .map(async (server) => {
+        const { routes, base_url, authentication } = server;
 
-      if (!routes || !base_url) {
-        return undefined;
-      }
+        if (!routes || !base_url) {
+          return undefined;
+        }
 
-      const { CREATE } = routes;
+        const { CREATE } = routes;
 
-      const createUrl = `${base_url}${CREATE}`;
+        const createUrl = `${base_url}${CREATE}`;
 
-      const baseHeaders = {
-        "Content-Type": "application/json",
-      };
-
-      try {
-        const response = await fetch(createUrl, {
-          method: "POST",
-          headers: authentication?.headers
-            ? {
-                ...authentication.headers,
-                ...baseHeaders,
-              }
-            : baseHeaders,
-          body: JSON.stringify({
-            ...(authentication?.body ? authentication.body : {}),
-            admin_password: adminPassword,
-            recovery_password: recoveryPassword,
-            iv,
-            encrypted_partial_data: encryptedPartialData,
-            lock_duration_seconds: lockDurationInSeconds,
-          }),
-        });
-
-        return {
-          server,
-          response:
-            (await response.json()) as TimeLockServerCreateKeyApiReponse,
+        const baseHeaders = {
+          "Content-Type": "application/json",
         };
-      } catch (error) {
-        console.error(error);
-        setErrorText && setErrorText((error as any).message || error);
-        return undefined;
-      }
-    }),
+
+        try {
+          const response = await fetch(createUrl, {
+            method: "POST",
+            headers: authentication?.headers
+              ? {
+                  ...authentication.headers,
+                  ...baseHeaders,
+                }
+              : baseHeaders,
+            body: JSON.stringify({
+              ...(authentication?.body ? authentication.body : {}),
+              admin_password: adminPassword,
+              recovery_password: recoveryPassword,
+              iv,
+              encrypted_partial_data: encryptedPartialData,
+              lock_duration_seconds: lockDurationInSeconds,
+            }),
+          });
+
+          return {
+            server,
+            response:
+              (await response.json()) as TimeLockServerCreateKeyApiReponse,
+          };
+        } catch (error) {
+          console.error(error);
+          setErrorText && setErrorText((error as any).message || error);
+          return undefined;
+        }
+      })
+      .map((p) =>
+        p.catch((e) => {
+          console.error(e);
+          setErrorText(e.message || e);
+        }),
+      ),
   );
 
   return results.map((r) => ({
