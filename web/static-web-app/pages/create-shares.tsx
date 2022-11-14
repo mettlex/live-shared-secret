@@ -644,9 +644,12 @@ const CreateShares: NextPage = () => {
                           autoComplete="off"
                           autoCorrect="off"
                           value={timeLockDurationNumber}
-                          onChange={(value) =>
-                            setTimeLockDurationNumber(value || 0)
-                          }
+                          onChange={(value) => {
+                            if (value && value > 0) {
+                              setTimeLockDurationNumber(value);
+                            }
+                          }}
+                          min={1}
                         ></NumberInput>
 
                         <Select
