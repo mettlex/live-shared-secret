@@ -4,6 +4,7 @@ import { GlobalStateContext } from "../../store/global";
 import { useActor } from "@xstate/react";
 import {
   IconChartPie,
+  IconClockPause,
   IconDoorEnter,
   IconHome2,
   IconHomeHeart,
@@ -11,6 +12,7 @@ import {
 } from "@tabler/icons";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { PageLinks } from "../../types";
 
 const AppNavbar = () => {
   const { pathname } = useRouter();
@@ -43,44 +45,55 @@ const AppNavbar = () => {
           />
         </Link>
 
-        <Link href="/settings" passHref>
+        <Link href={PageLinks.Settings} passHref>
           <NavLink
             label="Settings"
             icon={<IconSettings size={16} stroke={1.5} />}
-            active={pathname === "/settings"}
+            active={pathname === PageLinks.Settings}
             onClick={() => {
               send("CLOSED_NAV");
             }}
           />
         </Link>
 
-        <Link href="/create-room" passHref>
+        <Link href={PageLinks.CreateRoom} passHref>
           <NavLink
             label="Create Room"
             icon={<IconHomeHeart size={16} stroke={1.5} />}
-            active={pathname === "/create-room"}
+            active={pathname === PageLinks.CreateRoom}
             onClick={() => {
               send("CLOSED_NAV");
             }}
           />
         </Link>
 
-        <Link href="/enter-room" passHref>
+        <Link href={PageLinks.EnterRoom} passHref>
           <NavLink
             label="Enter Room"
             icon={<IconDoorEnter size={16} stroke={1.5} />}
-            active={pathname === "/enter-room"}
+            active={pathname === PageLinks.EnterRoom}
             onClick={() => {
               send("CLOSED_NAV");
             }}
           />
         </Link>
 
-        <Link href="/create-shares" passHref>
+        <Link href={PageLinks.CreateShares} passHref>
           <NavLink
             label="Create Shares"
             icon={<IconChartPie size={16} stroke={1.5} />}
-            active={pathname === "/create-shares"}
+            active={pathname === PageLinks.CreateShares}
+            onClick={() => {
+              send("CLOSED_NAV");
+            }}
+          />
+        </Link>
+
+        <Link href={PageLinks.TimeLock} passHref>
+          <NavLink
+            label="Time-Lock"
+            icon={<IconClockPause size={16} stroke={1.5} />}
+            active={pathname === PageLinks.TimeLock}
             onClick={() => {
               send("CLOSED_NAV");
             }}

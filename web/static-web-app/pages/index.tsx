@@ -3,7 +3,12 @@ import Head from "next/head";
 import Link from "next/link";
 import { Button, Stack } from "@mantine/core";
 import { PageLinks } from "../types";
-import { IconChartPie, IconDoorEnter, IconHomeHeart } from "@tabler/icons";
+import {
+  IconChartPie,
+  IconClockPause,
+  IconDoorEnter,
+  IconHomeHeart,
+} from "@tabler/icons";
 
 const Home: NextPage = () => {
   return (
@@ -11,7 +16,7 @@ const Home: NextPage = () => {
       align="center"
       justify="center"
       style={{
-        height: "calc(100% - 160px)",
+        height: "70%",
       }}
       spacing="xl"
     >
@@ -75,6 +80,25 @@ const Home: NextPage = () => {
           }}
         >
           Enter Room
+        </Button>
+      </Link>
+
+      <Link href={PageLinks.TimeLock} passHref>
+        <Button
+          component="a"
+          style={{ width: "80vw", maxWidth: "400px" }}
+          variant="light"
+          color="cyan"
+          size="md"
+          leftIcon={<IconClockPause />}
+          styles={{
+            leftIcon: {
+              position: "absolute",
+              left: "10%",
+            },
+          }}
+        >
+          Time-Lock
         </Button>
       </Link>
     </Stack>

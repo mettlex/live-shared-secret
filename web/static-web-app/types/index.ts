@@ -2,8 +2,105 @@ export enum PageLinks {
   Settings = "/settings",
   EnterRoom = "/enter-room",
   CreateRoom = "/create-room",
-  CreateShares = "create-shares",
+  CreateShares = "/create-shares",
+  TimeLock = "/time-lock",
 }
+
+export enum DurationFormat {
+  MINUTES = "minutes",
+  HOURS = "hours",
+  DAYS = "days",
+  MONTHS = "months",
+  YEARS = "years",
+}
+
+export type TimeLockServerErrorResponse = {
+  statusCode?: number;
+  message?: string;
+};
+
+export type TimeLockServerSuccessStatusResponse = {
+  success?: true;
+  message?: string;
+  key?: {
+    unlock_at?: string | null;
+    delete_at?: string;
+  };
+};
+
+export type TimeLockServerUnlockSuccessReponse = {
+  status: "STARTED" | "PENDING" | "UNLOCKED";
+  key: {
+    uuid?: string;
+    encrypted_partial_data?: string;
+    iv?: string;
+    lock_duration_seconds?: string;
+    unlock_at: string;
+    delete_at: string;
+  };
+};
+
+export type TimeLockServerUnlockApiReponse =
+  | TimeLockServerUnlockSuccessReponse
+  | TimeLockServerErrorResponse;
+
+export type TimeLockServerStatusApiResponse =
+  | TimeLockServerSuccessStatusResponse
+  | TimeLockServerErrorResponse;
+
+export type TimeLockServerCreateKeyResult = {
+  server?: TimeLockServer;
+  uuid?: string;
+};
+
+export type TimeLockServerInfoForShare = {
+  results: TimeLockServerCreateKeyResult[];
+  iv: string;
+};
+
+export type TimeLockServerInfoWithShare = {
+  share: string;
+  timeLock: TimeLockServerInfoForShare;
+};
+
+export interface TimeLockServer {
+  base_url?: string;
+  authentication?: TimeLockAuthentication;
+  routes?: TimeLockRoutes;
+}
+
+export interface TimeLockAuthentication {
+  headers?: TimeLockAuthHeaders;
+  body: TimeLockAuthBody;
+}
+
+export type TimeLockAuthHeaders = Record<string, string>;
+
+export type TimeLockAuthBody = Record<string, string>;
+
+export type TimeLockServerCreateKeyApiReponse = {
+  success?: boolean;
+  message?: string;
+  key?: {
+    uuid?: string;
+    unlock_at?: null;
+    delete_at?: string;
+  };
+};
+
+export interface TimeLockRoutes {
+  CREATE?: string;
+  DELETE?: string;
+  GET_TIME?: string;
+  READ?: string;
+  STATUS?: string;
+  UNLOCK?: string;
+  UPDATE?: string;
+}
+
+export type TimeLockProvider = {
+  servers: TimeLockServer[];
+};
 
 export type ErrorResponse = {
   success: boolean;

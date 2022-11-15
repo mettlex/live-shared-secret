@@ -13,7 +13,7 @@ export default function App(props: AppProps) {
       <Head>
         <meta
           name="viewport"
-          content="width=device-width, user-scalable=no, viewport-fit=cover"
+          content="minimum-scale=1, initial-scale=1, width=device-width, shrink-to-fit=no, user-scalable=no, viewport-fit=cover"
         />
         <link
           rel="apple-touch-icon"
