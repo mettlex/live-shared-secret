@@ -8,6 +8,8 @@ import {
   TimeLockServerStatusApiResponse,
   TimeLockServerErrorResponse,
   TimeLockServerSuccessStatusResponse,
+  TimeLockServerUnlockApiReponse,
+  TimeLockServerUnlockSuccessReponse,
 } from "../types";
 
 export const getRoomData = async ({
@@ -493,4 +495,82 @@ export const deleteKey = async ({
   }
 
   return responses;
+};
+
+export const unlockKey = async ({
+  recoveryPassword,
+  results,
+  setErrorText,
+}: {
+  recoveryPassword: string;
+  results: TimeLockServerCreateKeyResult[];
+  setErrorText: (errorText: string) => void;
+}) => {
+  for (const createApiResult of results) {
+    const { server, uuid } = createApiResult;
+
+    if (!server || !uuid) {
+      setErrorText("Invaid Time-Lock Server Info");
+      continue;
+    }
+
+    const { base_url, routes, authentication } = server;
+
+    if (!routes) {
+      setErrorText("Invaid Time-Lock Server Info");
+      continue;
+    }
+
+    const { UNLOCK } = routes;
+
+    const unlockUrl = `${base_url}${UNLOCK}`;
+
+    const baseHeaders = {
+      "Content-Type": "application/json",
+    };
+
+    try {
+      const response = await fetch(unlockUrl, {
+        method: "POST",
+        headers: authentication?.headers
+          ? {
+              ...authentication.headers,
+              ...baseHeaders,
+            }
+          : baseHeaders,
+        body: JSON.stringify({
+          ...(authentication?.body ? authentication.body : {}),
+          uuid,
+          recovery_password: recoveryPassword,
+        }),
+      });
+
+      const unlockApiResult =
+        (await response.json()) as TimeLockServerUnlockApiReponse;
+
+      if (
+        typeof (unlockApiResult as TimeLockServerErrorResponse)?.statusCode ===
+          "number" &&
+        (unlockApiResult as TimeLockServerErrorResponse)?.statusCode !== 200
+      ) {
+        setErrorText(
+          `${(unlockApiResult as TimeLockServerErrorResponse).statusCode}. ${
+            (unlockApiResult as TimeLockServerErrorResponse).message
+          }`,
+        );
+
+        continue;
+      }
+
+      if ((unlockApiResult as TimeLockServerUnlockSuccessReponse).key) {
+        return (unlockApiResult as TimeLockServerUnlockSuccessReponse).key;
+      } else {
+        return undefined;
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorText((error as any)?.message || error);
+      return undefined;
+    }
+  }
 };

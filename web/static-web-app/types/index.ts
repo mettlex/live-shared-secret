@@ -28,6 +28,22 @@ export type TimeLockServerSuccessStatusResponse = {
   };
 };
 
+export type TimeLockServerUnlockSuccessReponse = {
+  status: "STARTED" | "PENDING" | "UNLOCKED";
+  key: {
+    uuid?: string;
+    encrypted_partial_data?: string;
+    iv?: string;
+    lock_duration_seconds?: string;
+    unlock_at: string;
+    delete_at: string;
+  };
+};
+
+export type TimeLockServerUnlockApiReponse =
+  | TimeLockServerUnlockSuccessReponse
+  | TimeLockServerErrorResponse;
+
 export type TimeLockServerStatusApiResponse =
   | TimeLockServerSuccessStatusResponse
   | TimeLockServerErrorResponse;
