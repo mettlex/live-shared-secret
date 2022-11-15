@@ -640,7 +640,7 @@ const CreateShares: NextPage = () => {
                           placeholder={`Enter ${timeLockDurationFormat}`}
                           size="xs"
                           type="number"
-                          required
+                          required={usingTimeLock}
                           autoComplete="off"
                           autoCorrect="off"
                           value={timeLockDurationNumber}
@@ -689,7 +689,7 @@ const CreateShares: NextPage = () => {
                         mb="md"
                         placeholder="Enter admin password here"
                         label="Admin Password (Never Share)"
-                        required
+                        required={usingTimeLock}
                         value={adminPassword}
                         onChange={(event) => {
                           setAdminPassword(event.currentTarget.value.trim());

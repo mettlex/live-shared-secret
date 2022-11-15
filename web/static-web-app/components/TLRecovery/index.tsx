@@ -453,7 +453,7 @@ const TimeLockRecovery = ({ setSelected }: RecoveryPanelProps) => {
         opened={!!errorText}
         onClose={() => {
           if (errorText.toLowerCase().includes("match")) {
-            router.reload();
+            router.push("/");
             return;
           }
 
