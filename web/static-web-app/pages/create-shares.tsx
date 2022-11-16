@@ -17,6 +17,7 @@ import {
 } from "@mantine/core";
 import {
   IconClockPause,
+  IconCopy,
   IconLock,
   IconLockOpen,
   IconPlus,
@@ -640,7 +641,6 @@ const CreateShares: NextPage = () => {
                           placeholder={`Enter ${timeLockDurationFormat}`}
                           size="xs"
                           type="number"
-                          required={usingTimeLock}
                           autoComplete="off"
                           autoCorrect="off"
                           value={timeLockDurationNumber}
@@ -650,6 +650,7 @@ const CreateShares: NextPage = () => {
                             }
                           }}
                           min={1}
+                          required={usingTimeLock}
                         ></NumberInput>
 
                         <Select
@@ -689,8 +690,8 @@ const CreateShares: NextPage = () => {
                         mb="md"
                         placeholder="Enter admin password here"
                         label="Admin Password (Never Share)"
-                        required={usingTimeLock}
                         value={adminPassword}
+                        required={usingTimeLock}
                         onChange={(event) => {
                           setAdminPassword(event.currentTarget.value.trim());
                         }}
@@ -791,39 +792,93 @@ const CreateShares: NextPage = () => {
           <>
             {timeLockCreateKeyResults &&
               timeLockCreateKeyResults.filter((x) => x).length > 0 && (
+                <Stack spacing={0}>
+                  <Textarea
+                    minRows={2}
+                    style={{ width: "85vw", maxWidth: "400px" }}
+                    styles={{ input: { maxHeight: "20vh", height: "80px" } }}
+                    label={`Time-Lock Admin Information`}
+                    mb="lg"
+                    value={encryptedTimeLockAdminInfo}
+                    onFocus={(event) => event.currentTarget.select()}
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    onChange={() => {}}
+                    required
+                  />
+
+                  <Button
+                    mt={0}
+                    component="button"
+                    style={{ width: "85vw", maxWidth: "400px" }}
+                    variant="light"
+                    color="teal"
+                    size="md"
+                    leftIcon={<IconCopy />}
+                    styles={{
+                      leftIcon: {
+                        position: "absolute",
+                        left: "10%",
+                      },
+                    }}
+                    onClick={async (event) => {
+                      event.preventDefault();
+
+                      await navigator.clipboard.writeText(
+                        encryptedTimeLockAdminInfo,
+                      );
+
+                      alert(`Copied Admin Info`);
+                    }}
+                  >
+                    Copy Time-Lock Admin Info
+                  </Button>
+                </Stack>
+              )}
+
+            {new Array(totalShares).fill(0).map((_, i) => (
+              <Stack key={`share_${i}`} spacing={0}>
                 <Textarea
-                  minRows={7}
                   style={{ width: "85vw", maxWidth: "400px" }}
-                  styles={{ input: { maxHeight: "20vh", height: "200px" } }}
-                  label={`Time-Lock Admin Information`}
+                  styles={{ input: { maxHeight: "20vh", height: "80px" } }}
+                  label={`Encrypted Share #${i + 1}`}
                   mb="lg"
-                  value={encryptedTimeLockAdminInfo}
+                  value={encryptedShares[i]}
                   onFocus={(event) => event.currentTarget.select()}
                   autoComplete="off"
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck="false"
                   onChange={() => {}}
-                  required
                 />
-              )}
 
-            {new Array(totalShares).fill(0).map((_, i) => (
-              <Textarea
-                key={i}
-                minRows={7}
-                style={{ width: "85vw", maxWidth: "400px" }}
-                styles={{ input: { maxHeight: "20vh", height: "200px" } }}
-                label={`Encrypted Share #${i + 1}`}
-                mb="lg"
-                value={encryptedShares[i]}
-                onFocus={(event) => event.currentTarget.select()}
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck="false"
-                onChange={() => {}}
-              />
+                <Button
+                  mt={0}
+                  component="button"
+                  style={{ width: "85vw", maxWidth: "400px" }}
+                  variant="light"
+                  color="teal"
+                  size="md"
+                  leftIcon={<IconCopy />}
+                  styles={{
+                    leftIcon: {
+                      position: "absolute",
+                      left: "10%",
+                    },
+                  }}
+                  onClick={async (event) => {
+                    event.preventDefault();
+
+                    await navigator.clipboard.writeText(encryptedShares[i]);
+
+                    alert(`Copied Encrypted Share #${i + 1}`);
+                  }}
+                >
+                  Copy Encrypted Share {i + 1}
+                </Button>
+              </Stack>
             ))}
           </>
         )}

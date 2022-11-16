@@ -16,8 +16,7 @@ const Home: NextPage = () => {
   const [state, send] = useActor(appService);
   const router = useRouter();
 
-  const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
-    state.context;
+  const { serverlessApiAccessToken, serverlessApiBaseUrl } = state.context;
 
   useEffect(() => {
     send({
@@ -25,11 +24,15 @@ const Home: NextPage = () => {
     });
   }, [send]);
 
+  let token = serverlessApiAccessToken;
+  let url = serverlessApiBaseUrl;
+
   if (
     (state.matches("SettingsLoaded") || state.matches("Settings")) &&
     (!token || !url)
   ) {
-    router.push("/settings?back=/enter-room");
+    token = process.env.NEXT_PUBLIC_SERVERLESS_API_ACCESS_TOKEN || "room";
+    url = "https://secret-share.deno.dev";
   }
 
   return (

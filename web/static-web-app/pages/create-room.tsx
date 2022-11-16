@@ -66,14 +66,17 @@ const CreateRoom: NextPage = () => {
 
   const router = useRouter();
 
-  const { serverlessApiAccessToken: token, serverlessApiBaseUrl: url } =
-    state.context;
+  const { serverlessApiAccessToken, serverlessApiBaseUrl } = state.context;
+
+  let token = serverlessApiAccessToken;
+  let url = serverlessApiBaseUrl;
 
   if (
     (state.matches("SettingsLoaded") || state.matches("Settings")) &&
     (!token || !url)
   ) {
-    router.push("/settings?back=/create-room");
+    token = process.env.NEXT_PUBLIC_SERVERLESS_API_ACCESS_TOKEN || "room";
+    url = "https://secret-share.deno.dev";
   }
 
   const attemptToDecrypt = useCallback(async () => {
@@ -328,9 +331,7 @@ const CreateRoom: NextPage = () => {
               style={{ width: "80vw", maxWidth: "400px" }}
               mb="xl"
             >
-              Note: Creating room and copying the secret manually is not
-              recommended. Use automated tools to integrate this feature. This
-              page exists for demo purposes.
+              {`Note: Creating room and copying the secret manually is not recommended unless you want to use the time-lock feature. Use automated tools (eg. browser extension) to integrate the feature for joint-accounts.`}
             </Text>
 
             <TextInput
