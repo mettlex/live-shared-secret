@@ -1,0 +1,4 @@
+This is a Brave Rewards publisher verification file.
+
+Domain: sondhi.pages.dev
+Token: d8312621beb502647bad21c7381d2d3de601717991513320e5b5dee33e430988
