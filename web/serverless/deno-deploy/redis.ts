@@ -13,6 +13,7 @@ export const execRedisCommand = async ({
       port: Deno.env.get("REDIS_DB_PORT")!,
       username: Deno.env.get("REDIS_DB_USERNAME")!,
       password: Deno.env.get("REDIS_DB_PASSWORD")!,
+      tls: Deno.env.get("REDIS_DB_TLS")! === "true",
     });
 
     const reply = await redis.sendCommand(command, ...args);
